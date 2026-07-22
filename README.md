@@ -10,8 +10,9 @@
 </p>
 
 <p align="center">
+  <a href="#-tentang-proyek">Tentang</a> •
   <a href="#-fitur-utama">Fitur</a> •
-  <a href="#-struktur-folder">Struktur</a> •
+  <a href="#-screenshot">Screenshot</a> •
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-routing">Routing</a> •
   <a href="#-teknologi">Teknologi</a>
@@ -36,6 +37,7 @@ Dibangun dengan arsitektur **MVC PHP murni** (tanpa framework berat) yang diranc
 | 🔍 **Pencarian** | Cari gereja berdasarkan nama, lokasi, atau kata kunci |
 | ⛪ **Detail Gereja** | Alamat, foto, jadwal misa, peta interaktif, sosial media |
 | 📅 **Jadwal Misa** | Lihat jadwal misa dari semua gereja |
+| 🗺️ **Peta Interaktif** | Leaflet.js dengan 7 layer peta, marker & bottom sheet detail |
 | 📝 **Kotak Saran** | Pengunjung bisa mengusulkan perubahan jadwal |
 
 ### 🔧 Panel Admin
@@ -61,54 +63,27 @@ Dibangun dengan arsitektur **MVC PHP murni** (tanpa framework berat) yang diranc
 
 ---
 
-## 🏗️ Struktur Folder
+## 📸 Screenshot
 
-```
-Gereja-Katolik-Indonesia/
-├── .env                         # Environment configuration
-├── .env.example                 # Template environment
-├── router.php                   # PHP dev server router
-├── app/
-│   ├── init.php                 # Bootstrap aplikasi
-│   ├── core/                    # Framework core
-│   │   ├── App.php              # Application runner
-│   │   ├── Router.php           # URL routing + middleware
-│   │   ├── Controller.php       # Base controller
-│   │   ├── Model.php            # ORM / CRUD lengkap
-│   │   ├── Database.php         # PDO + mysql_ fallback
-│   │   ├── Config.php           # Load .env + constants
-│   │   ├── Security.php         # CSRF, XSS, rate limiting
-│   │   └── ...
-│   ├── controllers/             # 11 controllers
-│   ├── models/                  # 16 models
-│   ├── views/                   # Templates
-│   │   ├── admin/               # Panel admin
-│   │   ├── gereja/              # Detail gereja
-│   │   ├── jadwal/              # Jadwal misa
-│   │   ├── cari/                # Pencarian
-│   │   ├── auth/                # Login / register
-│   │   └── layouts/             # Layout components
-│   ├── database/
-│   │   ├── migrations/          # 12 migration files
-│   │   ├── seeders/             # Database seeders
-│   │   └── data/                # CSV wilayah Indonesia
-│   ├── routes/
-│   │   └── routes.php           # Definisi routes
-│   └── middlewares/             # Auth, Guest, Role middleware
-├── public/
-│   ├── index.php                # Entry point
-│   ├── .htaccess                # URL rewriting
-│   └── assets/
-│       ├── css/                 # Stylesheets
-│       ├── js/                  # JavaScript
-│       ├── images/              # Logo, avatars, dll
-│       ├── fonts/               # BoxIcons, LineIcons
-│       ├── plugins/             # DataTables, Select2, dll
-│       └── sass/                # Theme files
-└── storage/
-    ├── cache/                   # Cache files
-    └── logs/                    # Log files
-```
+### 📱 Mobile — Xiaomi Mi 11i
+
+| | | |
+|:-:|:-:|:-:|
+| Beranda | Beranda (Filter Aktif) | Cari Gereja |
+| <img src="_DEV/image/Xiaomi-Mi-11i-192.168.1.10.webp" width="240"> | <img src="_DEV/image/Xiaomi-Mi-11i-192.168.1.10%20(1).webp" width="240"> | <img src="_DEV/image/Xiaomi-Mi-11i-192.168.1.10%20(2).webp" width="240"> |
+| **Detail Gereja** | **Jadwal Misa** | **Filter Drawer** |
+| <img src="_DEV/image/Xiaomi-Mi-11i-192.168.1.10%20(3).webp" width="240"> | <img src="_DEV/image/Xiaomi-Mi-11i-192.168.1.10%20(4).webp" width="240"> | <img src="_DEV/image/Xiaomi-Mi-11i-192.168.1.10%20(5).webp" width="240"> |
+| **Peta Interaktif** | **Bottom Sheet Detail** | **Admin Panel** |
+| <img src="_DEV/image/Xiaomi-Mi-11i-192.168.1.10%20(6).webp" width="240"> | <img src="_DEV/image/Xiaomi-Mi-11i-192.168.1.10%20(7).webp" width="240"> | <img src="_DEV/image/Xiaomi-Mi-11i-192.168.1.10%20(8).webp" width="240"> |
+
+### 💻 Tablet — Galaxy Tab S7
+
+| | | |
+|:-:|:-:|:-:|
+| Beranda | Cari Gereja | Detail Gereja |
+| <img src="_DEV/image/Galaxy-Tab-S7-192.168.1.10.webp" width="360"> | <img src="_DEV/image/Galaxy-Tab-S7-192.168.1.10%20(1).webp" width="360"> | <img src="_DEV/image/Galaxy-Tab-S7-192.168.1.10%20(2).webp" width="360"> |
+| **Jadwal Misa** | **Peta Interaktif** | **Admin Panel** |
+| <img src="_DEV/image/Galaxy-Tab-S7-192.168.1.10%20(3).webp" width="360"> | <img src="_DEV/image/Galaxy-Tab-S7-192.168.1.10%20(4).webp" width="360"> | <img src="_DEV/image/Galaxy-Tab-S7-192.168.1.10%20(5).webp" width="360"> |
 
 ---
 
@@ -174,7 +149,7 @@ Akses panel admin: `http://localhost/Gereja-Katolik-Indonesia/admin/dashboard`
 
 ## 🗺️ Routing
 
-**File:** `app/routes/routes.php` (37 routes)
+**File:** `app/routes/routes.php`
 
 ### Halaman Publik (Guest)
 | Method | URL | Controller |
@@ -183,6 +158,7 @@ Akses panel admin: `http://localhost/Gereja-Katolik-Indonesia/admin/dashboard`
 | GET | `/gereja/{slug}` | `GerejaController@detail` |
 | GET | `/cari` | `CariController@index` |
 | GET | `/jadwal` | `JadwalController@index` |
+| GET | `/maps` | `MapsController@index` |
 | GET | `/saran/{slug}` | `SaranController@form` |
 | POST | `/saran/kirim` | `SaranController@kirim` |
 
@@ -272,7 +248,7 @@ $items = $gereja->rawQuery("SELECT * FROM gereja WHERE ...", $params);
 | **Database** | MySQL / MariaDB / PostgreSQL |
 | **Frontend** | HTML5, CSS3, JavaScript, Bootstrap 5 |
 | **Icons** | BoxIcons, LineIcons |
-| **Maps** | Google Maps API, Leaflet.js + OpenStreetMap |
+| **Maps** | Leaflet.js + OpenStreetMap (7 tile layers) |
 | **Libraries** | jQuery, DataTables, Select2, SweetAlert2, MetisMenu |
 | **PDF** | FPDF |
 | **Architecture** | MVC Pattern (Custom Framework) |
@@ -293,9 +269,9 @@ Dokumentasi lebih lengkap tersedia di folder `_DEV/`:
 
 Kontribusi sangat diterima! Silakan:
 1. Fork repository
-2. Buat branch fitur (`git checkout -b fitr-baru`)
+2. Buat branch fitur (`git checkout -b fitur-baru`)
 3. Commit perubahan (`git commit -m 'Tambah fitur baru'`)
-4. Push ke branch (`git push origin fitr-baru`)
+4. Push ke branch (`git push origin fitur-baru`)
 5. Buat Pull Request
 
 ---
