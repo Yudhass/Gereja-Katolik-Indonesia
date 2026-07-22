@@ -1,6 +1,5 @@
 Rencana Implementasi Aplikasi Gereja
 Ringkasan
-Proyek saat ini (SILAU - Laundry System) akan di-rewrite menjadi aplikasi Gereja menggunakan framework PHP yang sudah ada. Framework inti (core/) solid dan bisa dipakai ulang.
 Fase 1: Database & Migrasi
 #	Task	Detail
 1.1	Migration admins	Buat migration tabel admins (id, nama_lengkap, email, password_hash, created_at)
