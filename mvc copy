@@ -1,0 +1,631 @@
+#!/usr/bin/env php
+<?php
+/**
+ * MVC CLI Tool - Generator & Migration Runner
+ * Compatible with PHP 5.2, 7, 8+
+ * Auto-detects PHP version and uses appropriate database driver:
+ * - PHP 5.1+: PDO (recommended)
+ * - PHP 5.2: Fallback to mysql_* functions if PDO not available
+ */
+
+define('BASE_PATH', dirname(__FILE__));
+define('APP_PATH', BASE_PATH . '/app');
+define('MODELS_PATH', APP_PATH . '/models');
+define('CONTROLLERS_PATH', APP_PATH . '/controllers');
+define('MIGRATIONS_PATH', APP_PATH . '/database/migrations');
+
+// Detect PHP version and database driver
+define('PHP_VERSION_NUM', PHP_VERSION);
+define('USE_PDO', class_exists('PDO'));
+define('DB_DRIVER', USE_PDO ? 'PDO' : 'mysql');
+
+// Load configuration for database constants
+require_once APP_PATH . '/core/Config.php';
+
+// PHP 5.2 Compatibility: lcfirst() tidak tersedia sebelum PHP 5.3
+if (!function_exists('lcfirst')) {
+    function lcfirst($str) {
+        if (empty($str)) return $str;
+        $str[0] = strtolower($str[0]);
+        return $str;
+    }
+}
+
+// Parse arguments
+$command = isset($argv[1]) ? $argv[1] : '';
+$name = isset($argv[2]) ? $argv[2] : '';
+$options = array_slice($argv, 3);
+
+if (empty($command)) {
+    showHelp();
+    exit(0);
+}
+
+// Route commands
+if ($command === 'make:model') {
+    makeModel($name, $options);
+} elseif ($command === 'make:controller') {
+    makeController($name);
+} elseif ($command === 'make:migration') {
+    makeMigration($name);
+} elseif ($command === 'migrate' || $command === 'migrate:up') {
+    migrateUp();
+} elseif ($command === 'migrate:rollback' || $command === 'migrate:down') {
+    migrateDown();
+} elseif ($command === 'migrate:fresh') {
+    migrateFresh();
+} elseif ($command === 'migrate:list') {
+    migrateList();
+} elseif (strpos($command, 'migrate:') === 0) {
+    $migrationName = substr($command, 8);
+    migrateSingle($migrationName);
+} else {
+    echo "Unknown command: {$command}\n";
+    showHelp();
+}
+
+function makeModel($name, $options) {
+    if (empty($name)) {
+        echo "Error: Model name is required\n";
+        exit(1);
+    }
+    
+    $tableName = toSnakeCase($name);
+    $filePath = MODELS_PATH . '/' . $name . '.php';
+    
+    if (file_exists($filePath)) {
+        echo "Error: Model {$name} already exists!\n";
+        exit(1);
+    }
+    
+    $content = "<?php 
+
+require_once dirname(__FILE__) . '/../core/Model.php';
+
+class {$name} extends Model
+{
+    protected \$table = 'tbl_{$tableName}';
+    protected \$fields = array('id', 'nama');
+}
+";
+    
+    file_put_contents($filePath, $content);
+    echo "Model created: app/models/{$name}.php\n";
+    
+    if (in_array('-m', $options)) {
+        $migrationName = 'create_' . $tableName . '_table';
+        createMigration($migrationName, $tableName);
+    }
+    
+    if (in_array('-c', $options)) {
+        createController($name . 'Controller', $name);
+    }
+}
+
+function makeController($name) {
+    if (empty($name)) {
+        echo "Error: Controller name is required\n";
+        exit(1);
+    }
+    
+    if (strpos($name, 'Controller') === false) {
+        $name .= 'Controller';
+    }
+    
+    createController($name);
+}
+
+function makeMigration($name) {
+    if (empty($name)) {
+        echo "Error: Migration name is required\n";
+        exit(1);
+    }
+    
+    createMigration($name);
+}
+
+function createController($controllerName, $modelName = null) {
+    $filePath = CONTROLLERS_PATH . '/' . $controllerName . '.php';
+    
+    if (file_exists($filePath)) {
+        echo "Error: Controller {$controllerName} already exists!\n";
+        exit(1);
+    }
+    
+    if ($modelName === null) {
+        $modelName = str_replace('Controller', '', $controllerName);
+    }
+    
+    $modelVar = lcfirst($modelName);
+    $viewName = toSnakeCase($modelName);
+    
+    $content = "<?php
+require_once dirname(__FILE__) . '/../models/{$modelName}.php';
+
+class {$controllerName} extends Controller
+{
+    public function index()
+    {
+        \${$modelVar}Model = new {$modelName}();
+        \$data = \${$modelVar}Model->all();
+        \$this->view('admin/{$viewName}', \$data);
+    }
+
+    public function get(\$id = null)
+    {
+        \${$modelVar}Model = new {$modelName}();
+        \$data = \${$modelVar}Model->find(\$id);
+        
+        if (\$data) {
+            return jsonResponse(200, \"Data {$modelName}\", \$data);
+        } else {
+            return jsonResponse(404, \"{$modelName} tidak ditemukan\");
+        }
+    }
+
+    public function add()
+    {
+        if (CSRF_ENABLED && !verify_csrf()) {
+            \$this->redirectBack('Token CSRF tidak valid.', 'error');
+            return;
+        }
+
+        \$data = array(
+            'nama' => isset(\$_POST['nama']) ? sanitize(\$_POST['nama'], 'string') : '',
+        );
+
+        \$rules = array('nama' => 'required|string|min_length[3]|max_length[155]');
+
+        if (!validate(\$data, \$rules)) {
+            \$this->redirectBack('Validasi gagal', 'error');
+            return;
+        }
+
+        \${$modelVar}Model = new {$modelName}();
+        if (\${$modelVar}Model->insert(\$data)) {
+            \$this->redirect('/{$viewName}', 'Berhasil ditambahkan', 'success');
+        } else {
+            \$this->redirectBack('Gagal menambahkan data', 'error');
+        }
+    }
+
+    public function update(\$id = null)
+    {
+        if (CSRF_ENABLED && !verify_csrf()) {
+            \$this->redirectBack('Token CSRF tidak valid.', 'error');
+            return;
+        }
+
+        \$data = array(
+            'nama' => isset(\$_POST['nama']) ? sanitize(\$_POST['nama'], 'string') : '',
+        );
+
+        \${$modelVar}Model = new {$modelName}();
+        if (\${$modelVar}Model->update(\$id, \$data)) {
+            \$this->redirect('/{$viewName}', 'Berhasil diupdate', 'success');
+        } else {
+            \$this->redirectBack('Gagal update', 'error');
+        }
+    }
+
+    public function delete(\$id = null)
+    {
+        if (CSRF_ENABLED && !verify_csrf()) {
+            return jsonResponse(403, 'Token CSRF tidak valid');
+        }
+
+        \${$modelVar}Model = new {$modelName}();
+        if (\${$modelVar}Model->delete(\$id)) {
+            return jsonResponse(200, 'Berhasil dihapus');
+        } else {
+            return jsonResponse(500, 'Gagal menghapus');
+        }
+    }
+}
+";
+    
+    file_put_contents($filePath, $content);
+    echo "Controller created: app/controllers/{$controllerName}.php\n";
+}
+
+function createMigration($migrationName, $tableName = null) {
+    if (!is_dir(MIGRATIONS_PATH)) {
+        mkdir(MIGRATIONS_PATH, 0755, true);
+    }
+    
+    $timestamp = date('Y_m_d_His');
+    $fileName = $timestamp . '_' . $migrationName . '.php';
+    $filePath = MIGRATIONS_PATH . '/' . $fileName;
+    
+    if ($tableName === null) {
+        preg_match('/create_(.+)_table/', $migrationName, $matches);
+        $tableName = isset($matches[1]) ? $matches[1] : 'example';
+    }
+    
+    $tableNameFull = 'tbl_' . $tableName;
+    
+    // Generate unique function names based on timestamp
+    $timestamp = date('YmdHis');
+    $functionPrefix = 'migration_' . $timestamp;
+    
+    $content = "<?php
+/**
+ * Migration: Create {$tableName} Table
+ * Compatible dengan PHP 5.2, 7, 8+
+ */
+
+function {$functionPrefix}_up() {
+    // Auto-detect MySQL charset (utf8mb4 untuk MySQL 5.5.3+ atau utf8 untuk lebih lama)
+    \$charset = 'utf8'; // default aman untuk semua versi
+    
+    \$sql = \"CREATE TABLE IF NOT EXISTS `{$tableNameFull}` (
+        `id` INT(11) NOT NULL AUTO_INCREMENT,
+        `nama` VARCHAR(255) NOT NULL,
+        `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` TIMESTAMP NULL DEFAULT NULL,
+        PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=\" . \$charset . \";\";
+    
+    return \$sql;
+}
+
+function {$functionPrefix}_down() {
+    \$sql = \"DROP TABLE IF EXISTS `{$tableNameFull}`;\";
+    return \$sql;
+}
+
+// Return array untuk kompatibilitas
+return array(
+    'up' => '{$functionPrefix}_up',
+    'down' => '{$functionPrefix}_down'
+);";
+    
+    file_put_contents($filePath, $content);
+    echo "Migration created: app/database/migrations/{$fileName}\n";
+}
+
+function migrateUp() {
+    $db = initDatabase();
+    $migrations = getPendingMigrations($db);
+    
+    if (empty($migrations)) {
+        echo "Nothing to migrate.\n";
+        return;
+    }
+    
+    $batch = getNextBatch($db);
+    $count = 0;
+    
+    foreach ($migrations as $migration) {
+        echo "Migrating: {$migration}\n";
+        
+        $filePath = MIGRATIONS_PATH . '/' . $migration;
+        $migrationData = require $filePath;
+        
+        // Support array format (PHP 5.2+) dan object format (PHP 5.3+)
+        if (is_array($migrationData) && isset($migrationData['up'])) {
+            $upFunction = $migrationData['up'];
+            if (is_callable($upFunction)) {
+                $sql = call_user_func($upFunction);
+                if ($sql) {
+                    $db->query($sql);
+                }
+                recordMigration($db, $migration, $batch);
+                echo "Migrated: {$migration}\n";
+                $count++;
+            }
+        } elseif (is_object($migrationData) && method_exists($migrationData, 'up')) {
+            $sql = $migrationData->up();
+            if ($sql) {
+                $db->query($sql);
+            }
+            recordMigration($db, $migration, $batch);
+            echo "Migrated: {$migration}\n";
+            $count++;
+        }
+    }
+    
+    echo "\nMigrated {$count} migration(s).\n";
+}
+
+function migrateDown() {
+    $db = initDatabase();
+    $migration = getLastMigration($db);
+    
+    if (!$migration) {
+        echo "Nothing to rollback.\n";
+        return;
+    }
+    
+    echo "Rolling back: {$migration['migration']}\n";
+    
+    $filePath = MIGRATIONS_PATH . '/' . $migration['migration'];
+    $migrationData = require $filePath;
+    
+    // Support array format (PHP 5.2+) dan object format (PHP 5.3+)
+    if (is_array($migrationData) && isset($migrationData['down'])) {
+        $downFunction = $migrationData['down'];
+        if (is_callable($downFunction)) {
+            $sql = call_user_func($downFunction);
+            if ($sql) {
+                $db->query($sql);
+            }
+            removeMigration($db, $migration['migration']);
+            echo "Rolled back: {$migration['migration']}\n";
+        }
+    } elseif (is_object($migrationData) && method_exists($migrationData, 'down')) {
+        $sql = $migrationData->down();
+        if ($sql) {
+            $db->query($sql);
+        }
+        removeMigration($db, $migration['migration']);
+        echo "Rolled back: {$migration['migration']}\n";
+    }
+}
+
+function migrateFresh() {
+    $db = initDatabase();
+    
+    echo "Warning: This will drop all tables!\n";
+    echo "Are you sure? (yes/no): ";
+    
+    $handle = fopen("php://stdin", "r");
+    $line = fgets($handle);
+    fclose($handle);
+    
+    if (trim($line) !== 'yes') {
+        echo "Migration cancelled.\n";
+        return;
+    }
+    
+    $result = $db->query("SHOW TABLES");
+    $tables = array();
+    
+    while ($row = fetchNum($result)) {
+        $tables[] = $row[0];
+    }
+    
+    $db->query("SET FOREIGN_KEY_CHECKS = 0");
+    foreach ($tables as $table) {
+        echo "Dropping table: {$table}\n";
+        $db->query("DROP TABLE IF EXISTS `{$table}`");
+    }
+    $db->query("SET FOREIGN_KEY_CHECKS = 1");
+    
+    createMigrationsTable($db);
+    echo "\nRunning migrations...\n";
+    migrateUp();
+}
+
+function migrateList() {
+    $db = initDatabase();
+    $allMigrations = getAllMigrationFiles();
+    $ranMigrations = getRanMigrations($db);
+    
+    echo "\n=== Migration Status ===\n\n";
+    
+    if (empty($allMigrations)) {
+        echo "No migrations found.\n\n";
+        return;
+    }
+    
+    foreach ($allMigrations as $migration) {
+        $status = in_array($migration, $ranMigrations) ? '[X] Migrated' : '[ ] Pending';
+        echo "{$status} - {$migration}\n";
+    }
+    
+    echo "\n";
+}
+
+function migrateSingle($migrationName) {
+    $db = initDatabase();
+    $allMigrations = getAllMigrationFiles();
+    $migrationFile = null;
+    
+    foreach ($allMigrations as $migration) {
+        if ($migration === $migrationName || $migration === $migrationName . '.php' || strpos($migration, $migrationName) !== false) {
+            $migrationFile = $migration;
+            break;
+        }
+    }
+    
+    if (!$migrationFile) {
+        echo "Error: Migration '{$migrationName}' not found!\n";
+        echo "\nAvailable migrations:\n";
+        foreach ($allMigrations as $migration) {
+            echo "  - {$migration}\n";
+        }
+        return;
+    }
+    
+    $ranMigrations = getRanMigrations($db);
+    if (in_array($migrationFile, $ranMigrations)) {
+        echo "Migration '{$migrationFile}' already migrated.\n";
+        return;
+    }
+    
+    echo "Migrating: {$migrationFile}\n";
+    
+    $filePath = MIGRATIONS_PATH . '/' . $migrationFile;
+    $migrationData = require $filePath;
+    
+    // Support array format (PHP 5.2+) dan object format (PHP 5.3+)
+    if (is_array($migrationData) && isset($migrationData['up'])) {
+        $upFunction = $migrationData['up'];
+        if (is_callable($upFunction)) {
+            $sql = call_user_func($upFunction);
+            if ($sql) {
+                $db->query($sql);
+            }
+            $batch = getNextBatch($db);
+            recordMigration($db, $migrationFile, $batch);
+            echo "Migrated: {$migrationFile}\n";
+        }
+    } elseif (is_object($migrationData) && method_exists($migrationData, 'up')) {
+        $sql = $migrationData->up();
+        if ($sql) {
+            $db->query($sql);
+        }
+        $batch = getNextBatch($db);
+        recordMigration($db, $migrationFile, $batch);
+        echo "Migrated: {$migrationFile}\n";
+    }
+}
+
+function initDatabase() {
+    require_once APP_PATH . '/core/Database.php';
+    $db = Database::getInstance();
+    createMigrationsTable($db);
+    return $db;
+}
+
+// Helper function untuk fetch yang compatible dengan PDO dan mysql
+function fetchAssoc($result) {
+    if (USE_PDO) {
+        return $result->fetch(PDO::FETCH_ASSOC);
+    } else {
+        return mysql_fetch_assoc($result);
+    }
+}
+
+function fetchNum($result) {
+    if (USE_PDO) {
+        return $result->fetch(PDO::FETCH_NUM);
+    } else {
+        return mysql_fetch_array($result, MYSQL_NUM);
+    }
+}
+
+function getMySQLCharset($db) {
+    try {
+        $result = $db->query("SELECT VERSION() as version");
+        $row = fetchAssoc($result);
+        
+        if ($row && isset($row['version'])) {
+            $version = $row['version'];
+            // Parse version (format: 5.5.62-log or 8.0.30)
+            if (preg_match('/^(\d+)\.(\d+)\.(\d+)/', $version, $matches)) {
+                $major = (int)$matches[1];
+                $minor = (int)$matches[2];
+                $patch = (int)$matches[3];
+                
+                // utf8mb4 tersedia sejak MySQL 5.5.3
+                if ($major > 5 || ($major == 5 && $minor > 5) || ($major == 5 && $minor == 5 && $patch >= 3)) {
+                    return 'utf8mb4';
+                }
+            }
+        }
+    } catch (Exception $e) {
+        // Jika error, gunakan utf8 yang paling aman
+    }
+    
+    return 'utf8';
+}
+
+function createMigrationsTable($db) {
+    $charset = getMySQLCharset($db);
+    $sql = "CREATE TABLE IF NOT EXISTS migrations (
+        id INT(11) NOT NULL AUTO_INCREMENT,
+        migration VARCHAR(255) NOT NULL,
+        batch INT(11) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=" . $charset;
+    $db->query($sql);
+}
+
+function getPendingMigrations($db) {
+    $allMigrations = getAllMigrationFiles();
+    $ranMigrations = getRanMigrations($db);
+    return array_diff($allMigrations, $ranMigrations);
+}
+
+function getAllMigrationFiles() {
+    if (!is_dir(MIGRATIONS_PATH)) {
+        return array();
+    }
+    
+    $files = scandir(MIGRATIONS_PATH);
+    $migrations = array();
+    
+    foreach ($files as $file) {
+        if (substr($file, -4) === '.php') {
+            $migrations[] = $file;
+        }
+    }
+    
+    sort($migrations);
+    return $migrations;
+}
+
+function getRanMigrations($db) {
+    $result = $db->query("SELECT migration FROM migrations ORDER BY batch, id");
+    $migrations = array();
+    
+    while ($row = fetchAssoc($result)) {
+        $migrations[] = $row['migration'];
+    }
+    
+    return $migrations;
+}
+
+function getLastMigration($db) {
+    $result = $db->query("SELECT * FROM migrations ORDER BY batch DESC, id DESC LIMIT 1");
+    return fetchAssoc($result);
+}
+
+function getNextBatch($db) {
+    $result = $db->query("SELECT MAX(batch) as max_batch FROM migrations");
+    $row = fetchAssoc($result);
+    return ($row['max_batch'] ? $row['max_batch'] : 0) + 1;
+}
+
+function recordMigration($db, $migration, $batch) {
+    if (USE_PDO) {
+        $stmt = $db->prepare("INSERT INTO migrations (migration, batch) VALUES (?, ?)");
+        $stmt->execute(array($migration, $batch));
+    } else {
+        $migration = mysql_real_escape_string($migration);
+        $db->query("INSERT INTO migrations (migration, batch) VALUES ('{$migration}', {$batch})");
+    }
+}
+
+function removeMigration($db, $migration) {
+    if (USE_PDO) {
+        $stmt = $db->prepare("DELETE FROM migrations WHERE migration = ?");
+        $stmt->execute(array($migration));
+    } else {
+        $migration = mysql_real_escape_string($migration);
+        $db->query("DELETE FROM migrations WHERE migration = '{$migration}'");
+    }
+}
+
+function toSnakeCase($string) {
+    $string = preg_replace('/(?<!^)[A-Z]/', '_$0', $string);
+    return strtolower($string);
+}
+
+function showHelp() {
+    echo "\nMVC CLI Tool - Generator & Migration Runner\n";
+    echo "===========================================\n";
+    echo "PHP Version: " . PHP_VERSION_NUM . "\n";
+    echo "Database Driver: " . DB_DRIVER . "\n";
+    echo "===========================================\n\n";
+    echo "Usage: php mvc <command> [name] [options]\n\n";
+    echo "Generator:\n";
+    echo "  make:model <name> [-m] [-c]  Generate model\n";
+    echo "  make:controller <name>        Generate controller\n";
+    echo "  make:migration <name>         Generate migration\n\n";
+    echo "Migration:\n";
+    echo "  migrate                       Run all pending migrations\n";
+    echo "  migrate:up                    Run all pending migrations\n";
+    echo "  migrate:rollback              Rollback last migration\n";
+    echo "  migrate:down                  Rollback last migration\n";
+    echo "  migrate:fresh                 Drop all & re-run\n";
+    echo "  migrate:list                  List migrations\n";
+    echo "  migrate:<filename>            Run specific migration\n\n";
+    echo "Examples:\n";
+    echo "  php mvc make:model Produk -m -c\n";
+    echo "  php mvc migrate\n";
+    echo "  php mvc migrate:create_produk_table\n\n";
+}

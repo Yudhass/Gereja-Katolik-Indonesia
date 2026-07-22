@@ -1,0 +1,57 @@
+# # Environment Files
+# # .env
+# .env.local
+# .env.*.local
+
+# # IDE & Editors
+# .vscode/
+# .idea/
+# *.sublime-project
+# *.sublime-workspace
+# *.code-workspace
+
+# # OS Files
+# .DS_Store
+# Thumbs.db
+# desktop.ini
+
+# # Logs
+# *.log
+# storage/logs/*.log
+# !storage/logs/.gitkeep
+
+# # Cache
+# storage/cache/*
+# !storage/cache/.gitkeep
+
+# # Uploads
+# public/img/*
+# !public/img/.gitkeep
+
+# # Composer
+# vendor/
+# composer.lock
+
+# # Node modules (jika ada)
+node_modules/
+# package-lock.json
+
+# # Temporary files
+# *.tmp
+# *.temp
+# *.swp
+# *.bak
+# *~
+
+# # Build files
+# build/
+# dist/
+
+# # Database
+# *.sql
+# *.sqlite
+# *.db
+
+# # Backup files
+# backup/
+# *.backup

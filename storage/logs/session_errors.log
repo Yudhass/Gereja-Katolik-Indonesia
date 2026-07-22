@@ -1,0 +1,12 @@
+[2026-07-22 13:47:42] SessionManager::create error: SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'username' cannot be null
+[2026-07-22 15:34:15] SessionManager::create error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'db_gereja.user_sessions' doesn't exist
+[2026-07-22 15:34:15] SessionManager::validate error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'db_gereja.user_sessions' doesn't exist
+[2026-07-22 15:34:22] SessionManager::create error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'db_gereja.user_sessions' doesn't exist
+[2026-07-22 15:34:22] SessionManager::validate error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'db_gereja.user_sessions' doesn't exist
+[2026-07-22 15:34:26] SessionManager::create error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'db_gereja.user_sessions' doesn't exist
+[2026-07-22 15:34:26] SessionManager::validate error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'db_gereja.user_sessions' doesn't exist
+[2026-07-22 15:37:34] SessionManager::create error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'db_gereja.user_sessions' doesn't exist
+[2026-07-22 15:37:34] SessionManager::validate error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'db_gereja.user_sessions' doesn't exist
+[2026-07-22 15:39:04] SessionManager::create error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'db_gereja.user_sessions' doesn't exist
+[2026-07-22 15:39:04] SessionManager::validate error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'db_gereja.user_sessions' doesn't exist
+[2026-07-22 16:10:15] SessionManager::validate error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'db_gereja.user_sessions' doesn't exist

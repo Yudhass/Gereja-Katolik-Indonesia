@@ -1,0 +1,1327 @@
+#!/usr/bin/env php
+<?php
+/**
+ * MVC CLI Tool - Generator & Migration Runner
+ * Compatible with PHP 5.2, 7, 8+
+ * Auto-detects PHP version and uses appropriate database driver:
+ * - PHP 5.1+: PDO (recommended)
+ * - PHP 5.2: Fallback to mysql_* functions if PDO not available
+ */
+
+define('BASE_PATH', dirname(__FILE__));
+define('APP_PATH', BASE_PATH . '/app');
+define('MODELS_PATH', APP_PATH . '/models');
+define('CONTROLLERS_PATH', APP_PATH . '/controllers');
+define('MIGRATIONS_PATH', APP_PATH . '/database/migrations');
+define('SEEDERS_PATH', APP_PATH . '/database/seeders');
+
+// Detect PHP version and database driver
+define('PHP_VERSION_NUM', PHP_VERSION);
+define('USE_PDO', class_exists('PDO'));
+define('DB_DRIVER', USE_PDO ? 'PDO' : 'mysql');
+
+// Terminal Colors & Styling
+class TerminalStyle {
+    private static $colorSupport = null;
+    
+    const RESET = "\033[0m";
+    const BOLD = "\033[1m";
+    const DIM = "\033[2m";
+    
+    // Foreground colors
+    const BLACK = "\033[30m";
+    const RED = "\033[31m";
+    const GREEN = "\033[32m";
+    const YELLOW = "\033[33m";
+    const BLUE = "\033[34m";
+    const MAGENTA = "\033[35m";
+    const CYAN = "\033[36m";
+    const WHITE = "\033[37m";
+    
+    // Background colors
+    const BG_BLACK = "\033[40m";
+    const BG_RED = "\033[41m";
+    const BG_GREEN = "\033[42m";
+    const BG_YELLOW = "\033[43m";
+    const BG_BLUE = "\033[44m";
+    const BG_MAGENTA = "\033[45m";
+    const BG_CYAN = "\033[46m";
+    const BG_WHITE = "\033[47m";
+    
+    // Icons
+    const ICON_SUCCESS = "✓";
+    const ICON_ERROR = "✗";
+    const ICON_WARNING = "⚠";
+    const ICON_INFO = "ℹ";
+    const ICON_ARROW = "→";
+    const ICON_CHECK = "✔";
+    const ICON_CROSS = "✘";
+    const ICON_STAR = "★";
+    const ICON_ROCKET = "🚀";
+    const ICON_FILE = "📄";
+    const ICON_FOLDER = "📁";
+    const ICON_DATABASE = "🗄";
+    const ICON_GEAR = "⚙";
+    
+    /**
+     * Auto-detect terminal color support
+     * Works on Windows (CMD, PowerShell, Git Bash) and Linux
+     */
+    public static function supportsColor() {
+        if (self::$colorSupport !== null) {
+            return self::$colorSupport;
+        }
+        
+        // Deteksi OS
+        $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+        
+        // Jika bukan Windows (Linux/Mac), biasanya support color
+        if (!$isWindows) {
+            self::$colorSupport = true;
+            return true;
+        }
+        
+        // Windows detection
+        // 1. Cek ANSICON environment (untuk terminal yang support ANSI)
+        if (getenv('ANSICON') !== false) {
+            self::$colorSupport = true;
+            return true;
+        }
+        
+        // 2. Cek ConEmu/Cmder
+        if (getenv('ConEmuANSI') === 'ON') {
+            self::$colorSupport = true;
+            return true;
+        }
+        
+        // 3. Windows 10+ dengan VT100 support (PHP 7.2+)
+        if (function_exists('sapi_windows_vt100_support')) {
+            // Try to enable VT100 support
+            $stdout = defined('STDOUT') ? STDOUT : fopen('php://stdout', 'w');
+            if (@sapi_windows_vt100_support($stdout, true)) {
+                self::$colorSupport = true;
+                return true;
+            }
+        }
+        
+        // 4. Cek WT_SESSION (Windows Terminal) - hanya jika PHP 7+
+        // Karena Windows Terminal membutuhkan Windows 10 dan biasanya PHP modern
+        if (version_compare(PHP_VERSION, '7.0.0', '>=') && getenv('WT_SESSION') !== false) {
+            self::$colorSupport = true;
+            return true;
+        }
+        
+        // 5. Cek TERM environment - hati-hati dengan false positive
+        $term = getenv('TERM');
+        if ($term && $term !== 'dumb' && strpos($term, 'xterm') !== false) {
+            self::$colorSupport = true;
+            return true;
+        }
+        
+        // Default: disable colors untuk Windows CMD/PowerShell lama
+        self::$colorSupport = false;
+        return false;
+    }
+    
+    /**
+     * Apply color/style only if supported
+     */
+    private static function style($text, $codes) {
+        if (!self::supportsColor()) {
+            return $text;
+        }
+        return $codes . $text . self::RESET;
+    }
+    
+    public static function success($text) {
+        $icon = self::supportsColor() ? self::ICON_SUCCESS : "+";
+        return self::style($icon . " " . $text, self::GREEN . self::BOLD);
+    }
+    
+    public static function error($text) {
+        $icon = self::supportsColor() ? self::ICON_ERROR : "X";
+        return self::style($icon . " " . $text, self::RED . self::BOLD);
+    }
+    
+    public static function warning($text) {
+        $icon = self::supportsColor() ? self::ICON_WARNING : "!";
+        return self::style($icon . " " . $text, self::YELLOW . self::BOLD);
+    }
+    
+    public static function info($text) {
+        $icon = self::supportsColor() ? self::ICON_INFO : "i";
+        return self::style($icon . " " . $text, self::CYAN . self::BOLD);
+    }
+    
+    public static function highlight($text) {
+        return self::style($text, self::BOLD . self::CYAN);
+    }
+    
+    public static function dim($text) {
+        return self::style($text, self::DIM);
+    }
+    
+    public static function green($text) {
+        return self::style($text, self::GREEN);
+    }
+    
+    public static function blue($text) {
+        return self::style($text, self::BLUE);
+    }
+    
+    public static function yellow($text) {
+        return self::style($text, self::YELLOW);
+    }
+    
+    public static function red($text) {
+        return self::style($text, self::RED);
+    }
+    
+    public static function magenta($text) {
+        return self::style($text, self::MAGENTA);
+    }
+    
+    public static function box($title, $width = 50) {
+        if (self::supportsColor()) {
+            $line = str_repeat("═", $width - 2);
+            echo "\n" . self::CYAN . "╔" . $line . "╗" . self::RESET . "\n";
+            $padding = ($width - 2 - strlen($title)) / 2;
+            $leftPad = str_repeat(" ", floor($padding));
+            $rightPad = str_repeat(" ", ceil($padding));
+            echo self::CYAN . "║" . self::RESET . $leftPad . self::BOLD . self::YELLOW . $title . self::RESET . $rightPad . self::CYAN . "║" . self::RESET . "\n";
+            echo self::CYAN . "╚" . $line . "╝" . self::RESET . "\n\n";
+        } else {
+            // Fallback untuk Windows CMD lama
+            $line = str_repeat("=", $width - 2);
+            echo "\n+" . $line . "+\n";
+            $padding = ($width - 2 - strlen($title)) / 2;
+            $leftPad = str_repeat(" ", floor($padding));
+            $rightPad = str_repeat(" ", ceil($padding));
+            echo "|" . $leftPad . $title . $rightPad . "|\n";
+            echo "+" . $line . "+\n\n";
+        }
+    }
+    
+    public static function separator($width = 50) {
+        if (self::supportsColor()) {
+            echo self::DIM . str_repeat("─", $width) . self::RESET . "\n";
+        } else {
+            echo str_repeat("-", $width) . "\n";
+        }
+    }
+}
+
+// Load configuration for database constants
+require_once APP_PATH . '/core/Config.php';
+
+// PHP 5.2 Compatibility: lcfirst() tidak tersedia sebelum PHP 5.3
+if (!function_exists('lcfirst')) {
+    function lcfirst($str) {
+        if (empty($str)) return $str;
+        $str[0] = strtolower($str[0]);
+        return $str;
+    }
+}
+
+// Parse arguments
+$command = isset($argv[1]) ? $argv[1] : '';
+$name = isset($argv[2]) ? $argv[2] : '';
+// Parse all arguments after command untuk detect flags
+$allArgs = array_slice($argv, 1);
+
+if (empty($command)) {
+    showHelp();
+    exit(0);
+}
+
+// Route commands
+if ($command === 'make:model') {
+    $options = array_slice($argv, 3);
+    makeModel($name, $options);
+} elseif ($command === 'make:controller') {
+    makeController($name);
+} elseif ($command === 'make:migration') {
+    makeMigration($name);
+} elseif ($command === 'make:seeder') {
+    makeSeeder($name);
+} elseif ($command === 'migrate' || $command === 'migrate:up') {
+    $runSeed = in_array('-seed', $allArgs) || in_array('--seed', $allArgs);
+    migrateUp($runSeed);
+} elseif ($command === 'migrate:rollback' || $command === 'migrate:down') {
+    migrateDown();
+} elseif ($command === 'migrate:fresh') {
+    $runSeed = in_array('-seed', $allArgs) || in_array('--seed', $allArgs);
+    $skipConfirmation = in_array('-y', $allArgs) || in_array('--yes', $allArgs);
+    migrateFresh($runSeed, $skipConfirmation);
+} elseif ($command === 'migrate:list') {
+    migrateList();
+} elseif ($command === 'db:seed') {
+    runAllSeeders();
+} elseif (strpos($command, 'seed:') === 0) {
+    $seederName = substr($command, 5);
+    runSeeder($seederName);
+} elseif (strpos($command, 'migrate:') === 0) {
+    $migrationName = substr($command, 8);
+    migrateSingle($migrationName);
+} elseif ($command === 'serve') {
+    $port = isset($argv[2]) ? (int)$argv[2] : 8000;
+    serveApp($port);
+} else {
+    echo "Unknown command: {$command}\n";
+    showHelp();
+}
+
+function makeModel($name, $options) {
+    if (empty($name)) {
+        echo TerminalStyle::error("Model name is required") . "\n";
+        exit(1);
+    }
+    
+    $tableName = toSnakeCase($name);
+    $filePath = MODELS_PATH . '/' . $name . '.php';
+    
+    if (file_exists($filePath)) {
+        echo TerminalStyle::error("Model {$name} already exists!") . "\n";
+        exit(1);
+    }
+    
+    $content = "<?php 
+
+require_once dirname(__FILE__) . '/../core/Model.php';
+
+class {$name} extends Model
+{
+    protected \$table = 'tbl_{$tableName}';
+    protected \$fields = array('id', 'nama');
+}
+";
+    
+    file_put_contents($filePath, $content);
+    echo TerminalStyle::success("Model created") . " " . TerminalStyle::dim("app/models/{$name}.php") . "\n";
+    
+    if (in_array('-m', $options)) {
+        $migrationName = 'create_' . $tableName . '_table';
+        createMigration($migrationName, $tableName);
+    }
+    
+    if (in_array('-c', $options)) {
+        createController($name . 'Controller', $name);
+    }
+    
+    echo "\n" . TerminalStyle::info("Generated successfully!") . "\n";
+}
+
+function makeController($name) {
+    if (empty($name)) {
+        echo TerminalStyle::error("Controller name is required") . "\n";
+        exit(1);
+    }
+    
+    if (strpos($name, 'Controller') === false) {
+        $name .= 'Controller';
+    }
+    
+    createController($name);
+    echo "\n" . TerminalStyle::info("Generated successfully!") . "\n";
+}
+
+function makeMigration($name) {
+    if (empty($name)) {
+        echo TerminalStyle::error("Migration name is required") . "\n";
+        exit(1);
+    }
+    
+    createMigration($name);
+    echo "\n" . TerminalStyle::info("Generated successfully!") . "\n";
+}
+
+function makeSeeder($name) {
+    if (empty($name)) {
+        echo TerminalStyle::error("Seeder name is required") . "\n";
+        exit(1);
+    }
+    
+    // Pastikan nama seeder diakhiri dengan 'Seeder'
+    if (strpos($name, 'Seeder') === false) {
+        $name .= 'Seeder';
+    }
+    
+    createSeeder($name);
+    echo "\n" . TerminalStyle::info("Generated successfully!") . "\n";
+}
+
+function createController($controllerName, $modelName = null) {
+    $filePath = CONTROLLERS_PATH . '/' . $controllerName . '.php';
+    
+    if (file_exists($filePath)) {
+        echo TerminalStyle::error("Controller {$controllerName} already exists!") . "\n";
+        exit(1);
+    }
+    
+    if ($modelName === null) {
+        $modelName = str_replace('Controller', '', $controllerName);
+    }
+    
+    $modelVar = lcfirst($modelName);
+    $viewName = toSnakeCase($modelName);
+    
+    $content = "<?php
+require_once dirname(__FILE__) . '/../models/{$modelName}.php';
+
+class {$controllerName} extends Controller
+{
+    public function index()
+    {
+        \${$modelVar}Model = new {$modelName}();
+        \$data = \${$modelVar}Model->all();
+        \$this->view('admin/{$viewName}', \$data);
+    }
+
+    public function get(\$id = null)
+    {
+        \${$modelVar}Model = new {$modelName}();
+        \$data = \${$modelVar}Model->find(\$id);
+        
+        if (\$data) {
+            return jsonResponse(200, \"Data {$modelName}\", \$data);
+        } else {
+            return jsonResponse(404, \"{$modelName} tidak ditemukan\");
+        }
+    }
+
+    public function add()
+    {
+        if (CSRF_ENABLED && !verify_csrf()) {
+            \$this->redirectBack('Token CSRF tidak valid.', 'error');
+            return;
+        }
+
+        \$data = array(
+            'nama' => isset(\$_POST['nama']) ? sanitize(\$_POST['nama'], 'string') : '',
+        );
+
+        \$rules = array('nama' => 'required|string|min_length[3]|max_length[155]');
+
+        if (!validate(\$data, \$rules)) {
+            \$this->redirectBack('Validasi gagal', 'error');
+            return;
+        }
+
+        \${$modelVar}Model = new {$modelName}();
+        if (\${$modelVar}Model->insert(\$data)) {
+            \$this->redirect('/{$viewName}', 'Berhasil ditambahkan', 'success');
+        } else {
+            \$this->redirectBack('Gagal menambahkan data', 'error');
+        }
+    }
+
+    public function update(\$id = null)
+    {
+        if (CSRF_ENABLED && !verify_csrf()) {
+            \$this->redirectBack('Token CSRF tidak valid.', 'error');
+            return;
+        }
+
+        \$data = array(
+            'nama' => isset(\$_POST['nama']) ? sanitize(\$_POST['nama'], 'string') : '',
+        );
+
+        \${$modelVar}Model = new {$modelName}();
+        if (\${$modelVar}Model->update(\$id, \$data)) {
+            \$this->redirect('/{$viewName}', 'Berhasil diupdate', 'success');
+        } else {
+            \$this->redirectBack('Gagal update', 'error');
+        }
+    }
+
+    public function delete(\$id = null)
+    {
+        if (CSRF_ENABLED && !verify_csrf()) {
+            return jsonResponse(403, 'Token CSRF tidak valid');
+        }
+
+        \${$modelVar}Model = new {$modelName}();
+        if (\${$modelVar}Model->delete(\$id)) {
+            return jsonResponse(200, 'Berhasil dihapus');
+        } else {
+            return jsonResponse(500, 'Gagal menghapus');
+        }
+    }
+}
+";
+    
+    file_put_contents($filePath, $content);
+    echo TerminalStyle::success("Controller created") . " " . TerminalStyle::dim("app/controllers/{$controllerName}.php") . "\n";
+}
+
+function createMigration($migrationName, $tableName = null) {
+    if (!is_dir(MIGRATIONS_PATH)) {
+        mkdir(MIGRATIONS_PATH, 0755, true);
+    }
+    
+    $timestamp = date('Y_m_d_His');
+    $fileName = $timestamp . '_' . $migrationName . '.php';
+    $filePath = MIGRATIONS_PATH . '/' . $fileName;
+    
+    if ($tableName === null) {
+        preg_match('/create_(.+)_table/', $migrationName, $matches);
+        $tableName = isset($matches[1]) ? $matches[1] : 'example';
+    }
+    
+    $tableNameFull = 'tbl_' . $tableName;
+    
+    // Generate unique function names based on timestamp
+    $timestamp = date('YmdHis');
+    $functionPrefix = 'migration_' . $timestamp;
+    
+    $content = "<?php
+/**
+ * Migration: Create {$tableName} Table
+ * Compatible dengan PHP 5.2, 7, 8+
+ */
+
+function {$functionPrefix}_up() {
+    // Auto-detect MySQL charset (utf8mb4 untuk MySQL 5.5.3+ atau utf8 untuk lebih lama)
+    \$charset = 'utf8'; // default aman untuk semua versi
+    
+    \$sql = \"CREATE TABLE IF NOT EXISTS `{$tableNameFull}` (
+        `id` INT(11) NOT NULL AUTO_INCREMENT,
+        `nama` VARCHAR(255) NOT NULL,
+        `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` TIMESTAMP NULL DEFAULT NULL,
+        PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=\" . \$charset . \";\";
+    
+    return \$sql;
+}
+
+function {$functionPrefix}_down() {
+    \$sql = \"DROP TABLE IF EXISTS `{$tableNameFull}`;\";
+    return \$sql;
+}
+
+// Return array untuk kompatibilitas
+return array(
+    'up' => '{$functionPrefix}_up',
+    'down' => '{$functionPrefix}_down'
+);";
+    
+    file_put_contents($filePath, $content);
+    echo TerminalStyle::success("Migration created") . " " . TerminalStyle::dim("app/database/migrations/{$fileName}") . "\n";
+}
+
+function createSeeder($seederName) {
+    if (!is_dir(SEEDERS_PATH)) {
+        mkdir(SEEDERS_PATH, 0755, true);
+    }
+    
+    $filePath = SEEDERS_PATH . '/' . $seederName . '.php';
+    
+    if (file_exists($filePath)) {
+        echo TerminalStyle::error("Seeder {$seederName} already exists!") . "\n";
+        exit(1);
+    }
+    
+    // Extract table name dari seeder name (e.g., UserSeeder -> users)
+    $tableName = 'tbl_' . strtolower(str_replace('Seeder', '', $seederName));
+    $functionName = 'run_' . strtolower(str_replace('Seeder', '', $seederName)) . '_seeder';
+    
+    // Use heredoc untuk avoid escape issues di PHP 5.2
+    $content = <<<SEEDER
+<?php
+/**
+ * Seeder: {$seederName}
+ * Compatible dengan PHP 5.2, 7, 8+
+ */
+
+function {$functionName}() {
+    // Get database instance
+    require_once dirname(__FILE__) . '/../../core/Database.php';
+    \$db = Database::getInstance();
+    
+    // Example: Insert sample data
+    \$data = array(
+        array('nama' => 'Sample 1'),
+        array('nama' => 'Sample 2'),
+        array('nama' => 'Sample 3'),
+    );
+    
+    foreach (\$data as \$item) {
+        // Build INSERT query
+        \$columns = array_keys(\$item);
+        \$values = array_values(\$item);
+        
+        \$sql = "INSERT INTO {$tableName} (" . implode(', ', \$columns) . ") VALUES (";
+        
+        // Use PDO prepared statements atau mysql_real_escape_string
+        if (defined('USE_PDO') && USE_PDO) {
+            \$placeholders = array_fill(0, count(\$values), '?');
+            \$sql .= implode(', ', \$placeholders) . ")";
+            \$stmt = \$db->prepare(\$sql);
+            \$stmt->execute(\$values);
+        } else {
+            // Escape values for MySQL
+            \$escapedValues = array();
+            foreach (\$values as \$value) {
+                \$escapedValues[] = "'" . mysql_real_escape_string(\$value) . "'";
+            }
+            \$sql .= implode(', ', \$escapedValues) . ")";
+            \$db->query(\$sql);
+        }
+    }
+    
+    return count(\$data);
+}
+
+// Return seeder function name
+return '{$functionName}';
+
+SEEDER;
+    
+    file_put_contents($filePath, $content);
+    echo TerminalStyle::success("Seeder created") . " " . TerminalStyle::dim("app/database/seeders/{$seederName}.php") . "\n";
+}
+
+function runSeeder($seederName) {
+    $filePath = SEEDERS_PATH . '/' . $seederName . '.php';
+    
+    if (!file_exists($filePath)) {
+        echo TerminalStyle::error("Seeder {$seederName} not found!") . "\n";
+        exit(1);
+    }
+    
+    echo TerminalStyle::blue("  ⟳ Seeding: ") . TerminalStyle::dim($seederName) . "\n";
+    
+    // Capture output buffering untuk progress indicator
+    ob_start();
+    $seederFunction = require $filePath;
+    
+    if (is_string($seederFunction) && function_exists($seederFunction)) {
+        $count = call_user_func($seederFunction);
+        $output = ob_get_clean();
+        echo $output; // Display progress output
+        echo TerminalStyle::success("Seeded") . " " . TerminalStyle::green($seederName) . " (" . TerminalStyle::highlight($count . " records") . ")" . "\n";
+    } elseif (is_callable($seederFunction)) {
+        $count = call_user_func($seederFunction);
+        $output = ob_get_clean();
+        echo $output; // Display progress output
+        echo TerminalStyle::success("Seeded") . " " . TerminalStyle::green($seederName) . " (" . TerminalStyle::highlight($count . " records") . ")" . "\n";
+    } else {
+        ob_end_clean();
+    }
+}
+
+function runAllSeeders() {
+    TerminalStyle::box("DATABASE SEEDING");
+    
+    // Check if DatabaseSeeder exists
+    $databaseSeederPath = SEEDERS_PATH . '/DatabaseSeeder.php';
+    
+    if (file_exists($databaseSeederPath)) {
+        // Use DatabaseSeeder for controlled order
+        echo TerminalStyle::highlight("Running DatabaseSeeder...") . "\n\n";
+        
+        $seederFunction = require $databaseSeederPath;
+        
+        if (is_callable($seederFunction)) {
+            $count = call_user_func($seederFunction);
+            
+            echo "\n";
+            TerminalStyle::separator();
+            $icon = TerminalStyle::supportsColor() ? TerminalStyle::ICON_CHECK : "+";
+            echo TerminalStyle::green("  {$icon} Completed: {$count} total records seeded!") . "\n\n";
+        }
+    } else {
+        // Fallback to running all seeders alphabetically
+        $seeders = getAllSeederFiles();
+        
+        if (empty($seeders)) {
+            echo TerminalStyle::info("No seeders found") . "\n\n";
+            return;
+        }
+        
+        $total = count($seeders);
+        echo TerminalStyle::highlight("Running {$total} seeder(s)...") . "\n\n";
+        
+        foreach ($seeders as $seeder) {
+            $seederName = str_replace('.php', '', $seeder);
+            runSeeder($seederName);
+        }
+        
+        echo "\n";
+        TerminalStyle::separator();
+        $icon = TerminalStyle::supportsColor() ? TerminalStyle::ICON_CHECK : "+";
+        echo TerminalStyle::green("  {$icon} Completed: {$total} seeder(s) executed!") . "\n\n";
+    }
+}
+
+function getAllSeederFiles() {
+    if (!is_dir(SEEDERS_PATH)) {
+        return array();
+    }
+    
+    $files = scandir(SEEDERS_PATH);
+    $seeders = array();
+    
+    foreach ($files as $file) {
+        if ($file !== '.' && $file !== '..' && strpos($file, '.php') !== false) {
+            $seeders[] = $file;
+        }
+    }
+    
+    sort($seeders);
+    return $seeders;
+}
+
+function migrateUp($runSeed = false) {
+    TerminalStyle::box("DATABASE MIGRATION");
+    
+    $db = initDatabase();
+    $migrations = getPendingMigrations($db);
+    
+    if (empty($migrations)) {
+        echo TerminalStyle::info("Nothing to migrate") . "\n\n";
+        if ($runSeed) {
+            runAllSeeders();
+        }
+        return;
+    }
+    
+    $batch = getNextBatch($db);
+    $count = 0;
+    $total = count($migrations);
+    
+    echo TerminalStyle::highlight("Running {$total} migration(s)...") . "\n\n";
+    
+    foreach ($migrations as $migration) {
+        $icon = TerminalStyle::supportsColor() ? "⟳" : ">";
+        echo TerminalStyle::blue("  {$icon} Migrating: ") . TerminalStyle::dim($migration) . "\n";
+        
+        $filePath = MIGRATIONS_PATH . '/' . $migration;
+        $migrationData = require $filePath;
+        
+        // Support array format (PHP 5.2+) dan object format (PHP 5.3+)
+        if (is_array($migrationData) && isset($migrationData['up'])) {
+            $upFunction = $migrationData['up'];
+            if (is_callable($upFunction)) {
+                $sql = call_user_func($upFunction);
+                if ($sql) {
+                    $db->query($sql);
+                }
+                recordMigration($db, $migration, $batch);
+                echo TerminalStyle::success("Migrated") . " " . TerminalStyle::green($migration) . "\n";
+                $count++;
+            }
+        } elseif (is_object($migrationData) && method_exists($migrationData, 'up')) {
+            $sql = $migrationData->up();
+            if ($sql) {
+                $db->query($sql);
+            }
+            recordMigration($db, $migration, $batch);
+            echo TerminalStyle::success("Migrated") . " " . TerminalStyle::green($migration) . "\n";
+            $count++;
+        }
+    }
+    
+    echo "\n";
+    TerminalStyle::separator();
+    $icon = TerminalStyle::supportsColor() ? TerminalStyle::ICON_ROCKET : "*";
+    echo TerminalStyle::green("  {$icon} Completed: {$count} migration(s) successfully migrated!") . "\n\n";
+    
+    if ($runSeed) {
+        runAllSeeders();
+    }
+}
+
+function migrateDown() {
+    TerminalStyle::box("ROLLBACK MIGRATION");
+    
+    $db = initDatabase();
+    $migration = getLastMigration($db);
+    
+    if (!$migration) {
+        echo TerminalStyle::info("Nothing to rollback") . "\n\n";
+        return;
+    }
+    
+    echo TerminalStyle::warning("Rolling back: " . $migration['migration']) . "\n\n";
+    
+    $filePath = MIGRATIONS_PATH . '/' . $migration['migration'];
+    $migrationData = require $filePath;
+    
+    // Support array format (PHP 5.2+) dan object format (PHP 5.3+)
+    if (is_array($migrationData) && isset($migrationData['down'])) {
+        $downFunction = $migrationData['down'];
+        if (is_callable($downFunction)) {
+            $sql = call_user_func($downFunction);
+            if ($sql) {
+                $db->query($sql);
+            }
+            removeMigration($db, $migration['migration']);
+            echo TerminalStyle::success("Rolled back") . " " . TerminalStyle::green($migration['migration']) . "\n\n";
+        }
+    } elseif (is_object($migrationData) && method_exists($migrationData, 'down')) {
+        $sql = $migrationData->down();
+        if ($sql) {
+            $db->query($sql);
+        }
+        removeMigration($db, $migration['migration']);
+        echo TerminalStyle::success("Rolled back") . " " . TerminalStyle::green($migration['migration']) . "\n\n";
+    }
+}
+
+function migrateFresh($runSeed = false, $skipConfirmation = false) {
+    TerminalStyle::box("FRESH MIGRATION");
+    
+    $db = initDatabase();
+    
+    if (!$skipConfirmation) {
+        $warnIcon = TerminalStyle::supportsColor() ? "⚠" : "!";
+        echo TerminalStyle::red("  {$warnIcon}  WARNING: This will drop ALL tables!") . "\n";
+        echo TerminalStyle::yellow("  Are you sure? (yes/no) [default: yes]: ");
+        
+        $handle = fopen("php://stdin", "r");
+        $line = fgets($handle);
+        fclose($handle);
+        
+        $answer = trim($line);
+        
+        // Default to 'yes' if user just presses Enter
+        if (empty($answer)) {
+            $answer = 'yes';
+            echo TerminalStyle::dim("  (using default: yes)") . "\n";
+        }
+        
+        if ($answer !== 'yes') {
+            echo "\n" . TerminalStyle::info("Migration cancelled") . "\n\n";
+            return;
+        }
+    } else {
+        $warnIcon = TerminalStyle::supportsColor() ? "⚠" : "!";
+        echo TerminalStyle::red("  {$warnIcon}  WARNING: This will drop ALL tables!") . "\n";
+        echo TerminalStyle::dim("  (using: -y flag)") . "\n";
+    }
+    
+    echo "\n" . TerminalStyle::highlight("Dropping all tables...") . "\n\n";
+    
+    $result = $db->query("SHOW TABLES");
+    $tables = array();
+    
+    while ($row = fetchNum($result)) {
+        $tables[] = $row[0];
+    }
+    
+    $db->query("SET FOREIGN_KEY_CHECKS = 0");
+    foreach ($tables as $table) {
+        $icon = TerminalStyle::supportsColor() ? "✗" : "X";
+        echo TerminalStyle::red("  {$icon} Dropping: ") . TerminalStyle::dim($table) . "\n";
+        $db->query("DROP TABLE IF EXISTS `{$table}`");
+    }
+    $db->query("SET FOREIGN_KEY_CHECKS = 1");
+    
+    createMigrationsTable($db);
+    echo "\n";
+    TerminalStyle::separator();
+    echo "\n";
+    migrateUp($runSeed);
+}
+
+function migrateList() {
+    TerminalStyle::box("MIGRATION STATUS");
+    
+    $db = initDatabase();
+    $allMigrations = getAllMigrationFiles();
+    $ranMigrations = getRanMigrations($db);
+    
+    if (empty($allMigrations)) {
+        echo TerminalStyle::info("No migrations found") . "\n\n";
+        return;
+    }
+    
+    $migratedCount = 0;
+    $pendingCount = 0;
+    
+    $checkIcon = TerminalStyle::supportsColor() ? TerminalStyle::ICON_CHECK : "+";
+    $pendingIcon = TerminalStyle::supportsColor() ? "○" : "-";
+    
+    foreach ($allMigrations as $migration) {
+        if (in_array($migration, $ranMigrations)) {
+            echo TerminalStyle::green("  {$checkIcon} Migrated  ") . TerminalStyle::dim($migration) . "\n";
+            $migratedCount++;
+        } else {
+            echo TerminalStyle::yellow("  {$pendingIcon} Pending   ") . TerminalStyle::dim($migration) . "\n";
+            $pendingCount++;
+        }
+    }
+    
+    echo "\n";
+    TerminalStyle::separator();
+    $checkIcon = TerminalStyle::supportsColor() ? "✓" : "+";
+    $pendingIcon = TerminalStyle::supportsColor() ? "○" : "-";
+    echo TerminalStyle::green("  {$checkIcon} Migrated: {$migratedCount}") . " | " . TerminalStyle::yellow("{$pendingIcon} Pending: {$pendingCount}") . "\n\n";
+}
+
+function migrateSingle($migrationName) {
+    TerminalStyle::box("RUN SPECIFIC MIGRATION");
+    
+    $db = initDatabase();
+    $allMigrations = getAllMigrationFiles();
+    $migrationFile = null;
+    
+    foreach ($allMigrations as $migration) {
+        if ($migration === $migrationName || $migration === $migrationName . '.php' || strpos($migration, $migrationName) !== false) {
+            $migrationFile = $migration;
+            break;
+        }
+    }
+    
+    if (!$migrationFile) {
+        echo TerminalStyle::error("Migration '{$migrationName}' not found!") . "\n\n";
+        echo TerminalStyle::highlight("Available migrations:") . "\n";
+        foreach ($allMigrations as $migration) {
+            echo TerminalStyle::dim("  • {$migration}") . "\n";
+        }
+        echo "\n";
+        return;
+    }
+    
+    $ranMigrations = getRanMigrations($db);
+    if (in_array($migrationFile, $ranMigrations)) {
+        echo TerminalStyle::warning("Migration '{$migrationFile}' already migrated") . "\n\n";
+        return;
+    }
+    
+    $icon = TerminalStyle::supportsColor() ? "⟳" : ">";
+    echo TerminalStyle::blue("  {$icon} Migrating: ") . TerminalStyle::dim($migrationFile) . "\n\n";
+    
+    $filePath = MIGRATIONS_PATH . '/' . $migrationFile;
+    $migrationData = require $filePath;
+    
+    // Support array format (PHP 5.2+) dan object format (PHP 5.3+)
+    if (is_array($migrationData) && isset($migrationData['up'])) {
+        $upFunction = $migrationData['up'];
+        if (is_callable($upFunction)) {
+            $sql = call_user_func($upFunction);
+            if ($sql) {
+                $db->query($sql);
+            }
+            $batch = getNextBatch($db);
+            recordMigration($db, $migrationFile, $batch);
+            echo TerminalStyle::success("Migrated") . " " . TerminalStyle::green($migrationFile) . "\n\n";
+        }
+    } elseif (is_object($migrationData) && method_exists($migrationData, 'up')) {
+        $sql = $migrationData->up();
+        if ($sql) {
+            $db->query($sql);
+        }
+        $batch = getNextBatch($db);
+        recordMigration($db, $migrationFile, $batch);
+        echo TerminalStyle::success("Migrated") . " " . TerminalStyle::green($migrationFile) . "\n\n";
+    }
+}
+
+function initDatabase() {
+    ensureDatabaseExists();
+    require_once APP_PATH . '/core/Database.php';
+    $db = Database::getInstance();
+    createMigrationsTable($db);
+    return $db;
+}
+
+function ensureDatabaseExists() {
+    $host = DB_HOST;
+    $user = DB_USER;
+    $pass = DB_PASS;
+    $port = DB_PORT;
+    $dbName = DB_NAME;
+
+    try {
+        if (USE_PDO) {
+            $dsn = "mysql:host=$host;port=$port";
+            $pdo = new PDO($dsn, $user, $pass);
+            $stmt = $pdo->query("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = " . $pdo->quote($dbName));
+            if ($stmt->fetch()) {
+                return;
+            }
+        } else {
+            $conn = @mysql_connect("$host:$port", $user, $pass);
+            if ($conn) {
+                $result = @mysql_query("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '$dbName'", $conn);
+                if ($result && @mysql_num_rows($result) > 0) {
+                    @mysql_close($conn);
+                    return;
+                }
+            }
+        }
+    } catch (Exception $e) {
+        echo TerminalStyle::error("MySQL connection failed: " . $e->getMessage()) . "\n\n";
+        exit(1);
+    }
+
+    echo "\n";
+    $warnIcon = TerminalStyle::supportsColor() ? TerminalStyle::ICON_WARNING : "!";
+    echo TerminalStyle::yellow("  {$warnIcon} Database '" . $dbName . "' tidak ditemukan!") . "\n\n";
+    echo TerminalStyle::highlight("  Buat database '" . $dbName . "'? (yes/no): ");
+
+    $handle = fopen("php://stdin", "r");
+    $answer = trim(strtolower(fgets($handle)));
+
+    if ($answer !== 'yes' && $answer !== 'y') {
+        fclose($handle);
+        echo "\n" . TerminalStyle::info("Migration dibatalkan") . "\n\n";
+        exit(0);
+    }
+
+    echo TerminalStyle::highlight("  Gunakan nama database '" . $dbName . "'? (yes/no): ");
+    $answer2 = trim(strtolower(fgets($handle)));
+
+    if ($answer2 !== 'yes' && $answer2 !== 'y') {
+        echo TerminalStyle::highlight("  Masukkan nama database: ");
+        $customName = trim(fgets($handle));
+        fclose($handle);
+
+        if (!empty($customName)) {
+            $oldName = $dbName;
+            $dbName = $customName;
+            updateEnvDBName($dbName);
+            echo "\n";
+
+            try {
+                if (USE_PDO) {
+                    $dsn = "mysql:host=$host;port=$port";
+                    $pdo = new PDO($dsn, $user, $pass);
+                    $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbName}` CHARACTER SET utf8 COLLATE utf8_general_ci");
+                } else {
+                    $conn = @mysql_connect("$host:$port", $user, $pass);
+                    if ($conn) {
+                        @mysql_query("CREATE DATABASE IF NOT EXISTS `{$dbName}` CHARACTER SET utf8 COLLATE utf8_general_ci", $conn);
+                        @mysql_close($conn);
+                    }
+                }
+                echo TerminalStyle::success("Database '" . $dbName . "' berhasil dibuat!") . "\n";
+            } catch (Exception $e) {
+                echo TerminalStyle::error("Gagal membuat database: " . $e->getMessage()) . "\n";
+                exit(1);
+            }
+
+            echo TerminalStyle::warning("Jalankan ulang perintah migration.") . "\n\n";
+            exit(0);
+        }
+    } else {
+        fclose($handle);
+    }
+
+    $created = false;
+    try {
+        if (USE_PDO) {
+            $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbName}` CHARACTER SET utf8 COLLATE utf8_general_ci");
+        } else {
+            $conn = @mysql_connect("$host:$port", $user, $pass);
+            if ($conn) {
+                @mysql_query("CREATE DATABASE IF NOT EXISTS `{$dbName}` CHARACTER SET utf8 COLLATE utf8_general_ci", $conn);
+                @mysql_close($conn);
+            }
+        }
+        $created = true;
+    } catch (Exception $e) {
+        echo TerminalStyle::error("Gagal membuat database: " . $e->getMessage()) . "\n";
+        exit(1);
+    }
+
+    if ($created) {
+        echo TerminalStyle::success("Database '" . $dbName . "' berhasil dibuat!") . "\n\n";
+    }
+}
+
+function updateEnvDBName($newName) {
+    $envPath = BASE_PATH . '/.env';
+    if (!file_exists($envPath)) {
+        echo TerminalStyle::error("File .env tidak ditemukan!") . "\n";
+        return;
+    }
+
+    $content = file_get_contents($envPath);
+    $content = preg_replace('/^DB_NAME=.*$/m', 'DB_NAME=' . $newName, $content);
+    file_put_contents($envPath, $content);
+
+    echo TerminalStyle::success("Nama database di .env diubah menjadi '" . $newName . "'") . "\n";
+}
+
+// Helper function untuk fetch yang compatible dengan PDO dan mysql
+function fetchAssoc($result) {
+    if (USE_PDO) {
+        return $result->fetch(PDO::FETCH_ASSOC);
+    } else {
+        return mysql_fetch_assoc($result);
+    }
+}
+
+function fetchNum($result) {
+    if (USE_PDO) {
+        return $result->fetch(PDO::FETCH_NUM);
+    } else {
+        return mysql_fetch_array($result, MYSQL_NUM);
+    }
+}
+
+function getMySQLCharset($db) {
+    try {
+        $result = $db->query("SELECT VERSION() as version");
+        $row = fetchAssoc($result);
+        
+        if ($row && isset($row['version'])) {
+            $version = $row['version'];
+            // Parse version (format: 5.5.62-log or 8.0.30)
+            if (preg_match('/^(\d+)\.(\d+)\.(\d+)/', $version, $matches)) {
+                $major = (int)$matches[1];
+                $minor = (int)$matches[2];
+                $patch = (int)$matches[3];
+                
+                // utf8mb4 tersedia sejak MySQL 5.5.3
+                if ($major > 5 || ($major == 5 && $minor > 5) || ($major == 5 && $minor == 5 && $patch >= 3)) {
+                    return 'utf8mb4';
+                }
+            }
+        }
+    } catch (Exception $e) {
+        // Jika error, gunakan utf8 yang paling aman
+    }
+    
+    return 'utf8';
+}
+
+function createMigrationsTable($db) {
+    $charset = getMySQLCharset($db);
+    $sql = "CREATE TABLE IF NOT EXISTS migrations (
+        id INT(11) NOT NULL AUTO_INCREMENT,
+        migration VARCHAR(255) NOT NULL,
+        batch INT(11) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=" . $charset;
+    $db->query($sql);
+}
+
+function getPendingMigrations($db) {
+    $allMigrations = getAllMigrationFiles();
+    $ranMigrations = getRanMigrations($db);
+    return array_diff($allMigrations, $ranMigrations);
+}
+
+function getAllMigrationFiles() {
+    if (!is_dir(MIGRATIONS_PATH)) {
+        return array();
+    }
+    
+    $files = scandir(MIGRATIONS_PATH);
+    $migrations = array();
+    
+    foreach ($files as $file) {
+        if (substr($file, -4) === '.php') {
+            $migrations[] = $file;
+        }
+    }
+    
+    sort($migrations);
+    return $migrations;
+}
+
+function getRanMigrations($db) {
+    $result = $db->query("SELECT migration FROM migrations ORDER BY batch, id");
+    $migrations = array();
+    
+    while ($row = fetchAssoc($result)) {
+        $migrations[] = $row['migration'];
+    }
+    
+    return $migrations;
+}
+
+function getLastMigration($db) {
+    $result = $db->query("SELECT * FROM migrations ORDER BY batch DESC, id DESC LIMIT 1");
+    return fetchAssoc($result);
+}
+
+function getNextBatch($db) {
+    $result = $db->query("SELECT MAX(batch) as max_batch FROM migrations");
+    $row = fetchAssoc($result);
+    return ($row['max_batch'] ? $row['max_batch'] : 0) + 1;
+}
+
+function recordMigration($db, $migration, $batch) {
+    if (USE_PDO) {
+        $stmt = $db->prepare("INSERT INTO migrations (migration, batch) VALUES (?, ?)");
+        $stmt->execute(array($migration, $batch));
+    } else {
+        $migration = mysql_real_escape_string($migration);
+        $db->query("INSERT INTO migrations (migration, batch) VALUES ('{$migration}', {$batch})");
+    }
+}
+
+function removeMigration($db, $migration) {
+    if (USE_PDO) {
+        $stmt = $db->prepare("DELETE FROM migrations WHERE migration = ?");
+        $stmt->execute(array($migration));
+    } else {
+        $migration = mysql_real_escape_string($migration);
+        $db->query("DELETE FROM migrations WHERE migration = '{$migration}'");
+    }
+}
+
+function toSnakeCase($string) {
+    $string = preg_replace('/(?<!^)[A-Z]/', '_$0', $string);
+    return strtolower($string);
+}
+
+function serveApp($port = 8000) {
+    TerminalStyle::box("DEVELOPMENT SERVER", 60);
+    
+    // PHP built-in server tersedia sejak PHP 5.4.0
+    if (version_compare(PHP_VERSION, '5.4.0', '<')) {
+        echo TerminalStyle::error("PHP " . PHP_VERSION . " tidak support built-in server!") . "\n\n";
+        echo TerminalStyle::yellow("  Minimal PHP 5.4.0 diperlukan untuk php -S") . "\n";
+        echo TerminalStyle::dim("  Solusi: gunakan XAMPP Apache sebagai server:") . "\n";
+        echo TerminalStyle::dim("  - Buka XAMPP Control Panel") . "\n";
+        echo TerminalStyle::dim("  - Start Apache") . "\n";
+        echo TerminalStyle::dim("  - Akses http://localhost/SILAU2") . "\n\n";
+        exit(1);
+    }
+    
+    echo TerminalStyle::dim("  Starting PHP built-in development server...") . "\n\n";
+    
+    $host = '0.0.0.0';
+    $address = $host . ':' . $port;
+    
+    echo TerminalStyle::success("Server started") . " " . TerminalStyle::highlight("http://127.0.0.1:" . $port) . "\n";
+    echo TerminalStyle::dim("  Document Root: " . BASE_PATH . "/public") . "\n";
+    echo TerminalStyle::dim("  PHP Version:   " . PHP_VERSION_NUM) . "\n";
+    echo TerminalStyle::dim("  Press Ctrl+C to stop the server") . "\n\n";
+    
+    TerminalStyle::separator(60);
+    echo "\n";
+    
+    // Router script untuk handle URL rewriting
+    $routerScript = BASE_PATH . '/router.php';
+    
+    // Buat router.php jika belum ada
+    if (!file_exists($routerScript)) {
+        $routerContent = '<?php
+// Simple router for PHP built-in server
+$uri = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
+
+// Jika file ada di public/, serve langsung
+if ($uri && file_exists(__DIR__ . "/public" . $uri)) {
+    return false;
+}
+
+// Jika tidak, route ke index.php
+require __DIR__ . "/public/index.php";
+';
+        file_put_contents($routerScript, $routerContent);
+        echo TerminalStyle::info("Created router.php") . "\n\n";
+    }
+    
+    // Jalankan server
+    $command = "php -S {$address} -t " . escapeshellarg(BASE_PATH . '/public') . " " . escapeshellarg($routerScript);
+    
+    // Gunakan passthru agar output langsung tampil di terminal
+    passthru($command, $returnCode);
+    
+    if ($returnCode !== 0) {
+        echo "\n" . TerminalStyle::error("Server exited with code {$returnCode}") . "\n";
+    }
+}
+
+function showHelp() {
+    TerminalStyle::box("MVC CLI TOOL", 60);
+    
+    echo TerminalStyle::dim("  Generator & Migration Runner for PHP MVC Framework") . "\n\n";
+    
+    TerminalStyle::separator(60);
+    $infoIcon = TerminalStyle::supportsColor() ? TerminalStyle::ICON_INFO : "i";
+    echo TerminalStyle::blue("  {$infoIcon} System Info") . "\n";
+    TerminalStyle::separator(60);
+    echo TerminalStyle::dim("  PHP Version    : ") . TerminalStyle::green(PHP_VERSION_NUM) . "\n";
+    echo TerminalStyle::dim("  Database Driver: ") . TerminalStyle::green(DB_DRIVER) . "\n";
+    echo "\n";
+    
+    TerminalStyle::separator(60);
+    $gearIcon = TerminalStyle::supportsColor() ? TerminalStyle::ICON_GEAR : "*";
+    echo TerminalStyle::yellow("  {$gearIcon} Usage") . "\n";
+    TerminalStyle::separator(60);
+    echo TerminalStyle::dim("  php mvc <command> [name] [options]") . "\n";
+    echo "\n";
+    
+    TerminalStyle::separator(60);
+    $serverIcon = TerminalStyle::supportsColor() ? "🖥" : "S";
+    echo TerminalStyle::green("  {$serverIcon} Server Commands") . "\n";
+    TerminalStyle::separator(60);
+    echo TerminalStyle::highlight("  serve") . " [port]                   " . TerminalStyle::dim("Start development server (default: 8000)") . "\n";
+    echo "\n";
+    
+    TerminalStyle::separator(60);
+    $fileIcon = TerminalStyle::supportsColor() ? TerminalStyle::ICON_FILE : "#";
+    echo TerminalStyle::magenta("  {$fileIcon} Generator Commands") . "\n";
+    TerminalStyle::separator(60);
+    echo TerminalStyle::highlight("  make:model") . " <name> [-m] [-c]  " . TerminalStyle::dim("Generate model") . "\n";
+    echo TerminalStyle::highlight("  make:controller") . " <name>        " . TerminalStyle::dim("Generate controller") . "\n";
+    echo TerminalStyle::highlight("  make:migration") . " <name>         " . TerminalStyle::dim("Generate migration") . "\n";
+    echo TerminalStyle::highlight("  make:seeder") . " <name>            " . TerminalStyle::dim("Generate seeder") . "\n";
+    echo "\n";
+    
+    TerminalStyle::separator(60);
+    $dbIcon = TerminalStyle::supportsColor() ? TerminalStyle::ICON_DATABASE : "@";
+    echo TerminalStyle::blue("  {$dbIcon} Migration Commands") . "\n";
+    TerminalStyle::separator(60);
+    echo TerminalStyle::highlight("  migrate") . "                       " . TerminalStyle::dim("Run all pending migrations") . "\n";
+    echo TerminalStyle::highlight("  migrate:up") . "                    " . TerminalStyle::dim("Run all pending migrations") . "\n";
+    echo TerminalStyle::highlight("  migrate --seed") . "                " . TerminalStyle::dim("Run migrations & seeders") . "\n";
+    echo TerminalStyle::highlight("  migrate:rollback") . "              " . TerminalStyle::dim("Rollback last migration") . "\n";
+    echo TerminalStyle::highlight("  migrate:down") . "                  " . TerminalStyle::dim("Rollback last migration") . "\n";
+    echo TerminalStyle::highlight("  migrate:fresh") . "                 " . TerminalStyle::dim("Drop all & re-run migrations") . "\n";
+    echo TerminalStyle::highlight("  migrate:fresh -y") . "              " . TerminalStyle::dim("Fresh migrations (skip confirmation)") . "\n";
+    echo TerminalStyle::highlight("  migrate:fresh --seed") . "          " . TerminalStyle::dim("Fresh migrations & seeders") . "\n";
+    echo TerminalStyle::highlight("  migrate:fresh -y --seed") . "       " . TerminalStyle::dim("Fresh with seeders (skip confirmation)") . "\n";
+    echo TerminalStyle::highlight("  migrate:list") . "                  " . TerminalStyle::dim("List all migrations status") . "\n";
+    echo TerminalStyle::highlight("  migrate:<filename>") . "            " . TerminalStyle::dim("Run specific migration") . "\n";
+    echo "\n";
+    
+    TerminalStyle::separator(60);
+    $seedIcon = TerminalStyle::supportsColor() ? "🌱" : "S";
+    echo TerminalStyle::green("  {$seedIcon} Seeder Commands") . "\n";
+    TerminalStyle::separator(60);
+    echo TerminalStyle::highlight("  db:seed") . "                       " . TerminalStyle::dim("Run all seeders") . "\n";
+    echo TerminalStyle::highlight("  seed:<name>") . "                   " . TerminalStyle::dim("Run specific seeder") . "\n";
+    echo "\n";
+    
+    TerminalStyle::separator(60);
+    $starIcon = TerminalStyle::supportsColor() ? TerminalStyle::ICON_STAR : "*";
+    echo TerminalStyle::green("  {$starIcon} Examples") . "\n";
+    TerminalStyle::separator(60);
+    echo TerminalStyle::dim("  # Create model with migration and controller") . "\n";
+    echo TerminalStyle::yellow("  php mvc make:model Produk -m -c") . "\n\n";
+    echo TerminalStyle::dim("  # Run all pending migrations") . "\n";
+    echo TerminalStyle::yellow("  php mvc migrate") . "\n\n";
+    echo TerminalStyle::dim("  # Run migrations with seeders") . "\n";
+    echo TerminalStyle::yellow("  php mvc migrate --seed") . "\n\n";
+    echo TerminalStyle::dim("  # Fresh migration with seeders") . "\n";
+    echo TerminalStyle::yellow("  php mvc migrate:fresh --seed") . "\n\n";
+    echo TerminalStyle::dim("  # Fresh migration (skip confirmation)") . "\n";
+    echo TerminalStyle::yellow("  php mvc migrate:fresh -y") . "\n\n";
+    echo TerminalStyle::dim("  # Fresh migration with seeders (skip confirmation)") . "\n";
+    echo TerminalStyle::yellow("  php mvc migrate:fresh -y --seed") . "\n\n";
+    echo TerminalStyle::dim("  # Create seeder") . "\n";
+    echo TerminalStyle::yellow("  php mvc make:seeder UserSeeder") . "\n\n";
+    echo TerminalStyle::dim("  # Run all seeders") . "\n";
+    echo TerminalStyle::yellow("  php mvc db:seed") . "\n\n";
+    echo TerminalStyle::dim("  # Run specific seeder") . "\n";
+    echo TerminalStyle::yellow("  php mvc seed:UserSeeder") . "\n\n";
+    echo TerminalStyle::dim("  # Run specific migration") . "\n";
+    echo TerminalStyle::yellow("  php mvc migrate:create_produk_table") . "\n\n";
+    echo TerminalStyle::dim("  # List migration status") . "\n";
+    echo TerminalStyle::yellow("  php mvc migrate:list") . "\n\n";
+    echo TerminalStyle::dim("  # Start development server on port 8000") . "\n";
+    echo TerminalStyle::yellow("  php mvc serve") . "\n\n";
+    echo TerminalStyle::dim("  # Start development server on custom port") . "\n";
+    echo TerminalStyle::yellow("  php mvc serve 3000") . "\n\n";
+}

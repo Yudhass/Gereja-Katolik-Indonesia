@@ -1,0 +1,16 @@
+# Logs Directory
+
+Log files akan disimpan di sini.
+
+## Format
+
+```
+YYYY-MM-DD.log
+```
+
+## Contoh
+
+```
+2026-01-21.log
+2026-01-22.log
+```
