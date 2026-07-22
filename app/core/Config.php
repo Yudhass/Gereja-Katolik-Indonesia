@@ -17,21 +17,6 @@ define('DB_PASS', env('DB_PASS', ''));
 define('DB_NAME', env('DB_NAME', 'crudtest'));
 define('DB_PORT', env('DB_PORT', '3306'));
 
-// Secondary Database Configuration (Karyawan)
-define('DB_KARYAWAN_HOST', env('DB_KARYAWAN_HOST', 'localhost'));
-define('DB_KARYAWAN_USER', env('DB_KARYAWAN_USER', 'root'));
-define('DB_KARYAWAN_PASS', env('DB_KARYAWAN_PASS', ''));
-define('DB_KARYAWAN_NAME', env('DB_KARYAWAN_NAME', 'db_karyawan'));
-define('DB_KARYAWAN_PORT', env('DB_KARYAWAN_PORT', '3306'));
-
-// TERA Database Configuration (PostgreSQL)
-define('DB_TERA_DRIVER', env('DB_TERA_DRIVER', 'mysql'));
-define('DB_TERA_HOST', env('DB_TERA_HOST', 'localhost'));
-define('DB_TERA_USER', env('DB_TERA_USER', 'root'));
-define('DB_TERA_PASS', env('DB_TERA_PASS', ''));
-define('DB_TERA_NAME', env('DB_TERA_NAME', 'TERA'));
-define('DB_TERA_PORT', env('DB_TERA_PORT', '3306'));
-
 // Register Database Connections
 require_once dirname(__FILE__) . '/DatabaseManager.php';
 
@@ -43,26 +28,6 @@ DatabaseManager::addConnection('default', array(
     'pass' => DB_PASS,
     'name' => DB_NAME,
     'port' => DB_PORT
-));
-
-// Register karyawan connection
-DatabaseManager::addConnection('karyawan', array(
-    'driver' => 'mysql',
-    'host' => DB_KARYAWAN_HOST,
-    'user' => DB_KARYAWAN_USER,
-    'pass' => DB_KARYAWAN_PASS,
-    'name' => DB_KARYAWAN_NAME,
-    'port' => DB_KARYAWAN_PORT
-));
-
-// Register TERA connection
-DatabaseManager::addConnection('tera', array(
-    'driver' => DB_TERA_DRIVER,
-    'host' => DB_TERA_HOST,
-    'user' => DB_TERA_USER,
-    'pass' => DB_TERA_PASS,
-    'name' => DB_TERA_NAME,
-    'port' => DB_TERA_PORT
 ));
 
 // Application Configuration
@@ -81,6 +46,8 @@ if (empty($baseUrl)) {
         $protocol = 'https';
     } elseif (!empty($_SERVER['REQUEST_SCHEME'])) {
         $protocol = $_SERVER['REQUEST_SCHEME'];
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+        $protocol = $_SERVER['HTTP_X_FORWARDED_PROTO'];
     }
     $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
     $docRoot = str_replace('\\', '/', isset($_SERVER['DOCUMENT_ROOT']) ? $_SERVER['DOCUMENT_ROOT'] : '');

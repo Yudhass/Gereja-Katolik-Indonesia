@@ -5,6 +5,7 @@ $router->get('/', 'HomeController@index');
 $router->get('/gereja/{slug}', 'GerejaController@detail');
 $router->get('/cari', 'CariController@index');
 $router->get('/jadwal', 'JadwalController@index');
+$router->get('/maps', 'MapsController@index');
 
 $router->get('/saran/{slug}', 'SaranController@form');
 $router->post('/saran/kirim', 'SaranController@kirim');

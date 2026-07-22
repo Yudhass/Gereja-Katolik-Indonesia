@@ -46,7 +46,7 @@
 <div class="detail-header">
     <div class="container">
         <div class="header-row">
-            <a href="<?= BASEURL; ?>" class="back-btn"><i class="bx bx-arrow-back"></i></a>
+            <a href="<?= isset($_GET['from']) && $_GET['from'] === 'maps' ? BASEURL . 'maps' : BASEURL; ?>" class="back-btn"><i class="bx bx-arrow-back"></i></a>
             <span class="header-title">Detail Gereja</span>
         </div>
     </div>

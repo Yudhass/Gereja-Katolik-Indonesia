@@ -103,6 +103,26 @@
     .filter-fab:active { transform: scale(0.92); }
     .filter-fab.has-filter { background: #CFA969; }
 
+    .maps-fab {
+        position: fixed;
+        bottom: 100px; right: 18px;
+        width: 48px; height: 48px;
+        border-radius: 50%;
+        background: #CFA969;
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 16px rgba(207,169,105,0.4);
+        font-size: 1.3rem;
+        z-index: 1035;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        transition: transform .2s, box-shadow .2s;
+    }
+    .maps-fab:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(207,169,105,0.5); color: #fff; }
+    .maps-fab:active { transform: scale(0.92); }
+
     .filter-drawer-overlay {
         position: fixed;
         inset: 0;
@@ -199,8 +219,12 @@
         .hero-section { padding: 2rem 1rem 1.5rem; }
         .hero-section h1 { font-size: 1.4rem; }
         .gereja-card .card-img-top { height: 140px; }
-        .site-footer { margin-bottom: 70px; border-radius: 0; padding: 1.25rem 0; }
+        .site-footer { margin-bottom: 0; border-radius: 0; padding: 0.75rem 0; margin-top: 1rem; }
         .filter-fab { display: flex; }
+        .maps-fab { display: none; }
+    }
+    @media (min-width: 768px) {
+        .maps-fab { display: flex; }
     }
 </style>
 
@@ -217,7 +241,7 @@
     </div>
 </div>
 
-<div class="page-content-wrap pb-5 mb-4">
+<div class="page-content-wrap pb-1">
     <div class="filter-card d-none d-md-block">
         <div class="card-body">
             <form method="GET" action="<?= BASEURL; ?>" id="filterForm">
@@ -290,6 +314,9 @@
     <button class="filter-fab d-md-none <?= $selectedProvinsi || $selectedKabupaten || $selectedKecamatan || $selectedKelurahan || $hasJadwalFilter ? 'has-filter' : ''; ?>" id="filterFab" onclick="toggleFilterDrawer()">
         <i class="bx <?= $selectedProvinsi || $selectedKabupaten || $selectedKecamatan || $selectedKelurahan || $hasJadwalFilter ? 'bx-filter' : 'bx-filter-alt'; ?>"></i>
     </button>
+    <a href="<?= BASEURL; ?>maps" class="maps-fab" title="Lihat Peta Gereja">
+        <i class="bx bx-map"></i>
+    </a>
 
     <div class="filter-drawer-overlay d-md-none" id="filterOverlay" onclick="toggleFilterDrawer()"></div>
     <div class="filter-drawer d-md-none" id="filterDrawer">
@@ -410,7 +437,7 @@
     <?php else: ?>
     <div class="row g-3">
         <?php foreach ($gerejaList as $g): ?>
-        <div class="col-12 col-md-3">
+        <div class="col-12 col-md-4 col-xl-3">
             <div class="card gereja-card">
                 <?php
                     $fotoUrl = isset($fotoByGereja[$g->id]) ? $fotoByGereja[$g->id] : '';
