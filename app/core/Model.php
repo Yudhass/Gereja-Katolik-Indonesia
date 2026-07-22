@@ -164,8 +164,8 @@ class Model extends Database
     /**
      * WHERE LIKE clause
      * Usage: 
-     * - $model->whereLike('nama', 'laundry')->first(); // satu data
-     * - $model->whereLike('nama', 'laundry')->get(); // banyak data
+     * - $model->whereLike('nama', 'contoh')->first(); // satu data
+     * - $model->whereLike('nama', 'contoh')->get(); // banyak data
      * 
      * @param string $column Column name
      * @param mixed $value Value to search (wildcards % will be added automatically)

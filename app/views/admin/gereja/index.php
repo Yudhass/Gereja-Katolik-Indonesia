@@ -45,9 +45,33 @@ foreach ($provinces as $p) {
                     <i class="bx bx-church" style="color:#2C4463; font-size:1.3rem;"></i>
                     <h5 class="mb-0 fw-bold">Data Gereja</h5>
                 </div>
-                <button type="button" class="btn btn-light btn-sm" style="background:#fff; border:2px solid #2C4463; color:#2C4463; font-weight:600;" data-bs-toggle="modal" data-bs-target="#modalAdd">
-                    <i class="bx bx-plus me-1" style="color:#2C4463;"></i>Tambah Gereja
+                <button type="button" class="btn btn-custom-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAdd">
+                    <i class="bx bx-plus me-1"></i>Tambah Gereja
                 </button>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body py-2">
+                    <form method="GET" action="<?= BASEURL; ?>admin/gereja" class="row g-2 align-items-end">
+                        <div class="col-12 col-md-5">
+                            <label class="form-label small mb-1">Cari</label>
+                            <input type="text" name="q" class="form-control form-control-sm" placeholder="Nama gereja, alamat, provinsi..." value="<?= htmlspecialchars($filterSearch); ?>">
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <label class="form-label small mb-1">Provinsi</label>
+                            <select name="provinsi" class="form-select form-select-sm">
+                                <option value="">Semua Provinsi</option>
+                                <?php foreach ($provinces as $p): ?>
+                                <option value="<?= htmlspecialchars($p->name); ?>" <?= $filterProvinsi == $p->name ? 'selected' : ''; ?>><?= htmlspecialchars($p->name); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3 d-flex gap-2">
+                            <button type="submit" class="btn btn-custom-primary btn-sm flex-fill"><i class="bx bx-filter me-1"></i>Filter</button>
+                            <a href="<?= BASEURL; ?>admin/gereja" class="btn btn-custom-outline btn-sm flex-fill"><i class="bx bx-reset me-1"></i>Reset</a>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             <div class="card">

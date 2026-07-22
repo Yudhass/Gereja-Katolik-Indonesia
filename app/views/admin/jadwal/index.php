@@ -12,46 +12,62 @@
     <?php $this->view('layouts/navbar'); ?>
     <div class="page-wrapper">
         <div class="page-content">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div class="d-flex align-items-center gap-2">
                     <i class="bx bx-calendar-event" style="color:#2C4463; font-size:1.3rem;"></i>
-                    <h5 class="mb-0 fw-bold">Jadwal Misa</h5>
+                    <h5 class="mb-0 fw-bold" style="font-size:clamp(1rem,2.5vw,1.25rem);">Jadwal Misa</h5>
                 </div>
-                <button type="button" class="btn btn-custom-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAdd">
+                <button type="button" class="btn btn-custom-primary btn-sm flex-shrink-0" data-bs-toggle="modal" data-bs-target="#modalAdd">
                     <i class="bx bx-plus me-1"></i>Tambah Jadwal
                 </button>
             </div>
 
             <div class="card mb-3">
                 <div class="card-body py-2">
-                    <form method="GET" action="<?= BASEURL; ?>admin/jadwal" class="row g-2 align-items-end">
-                        <div class="col-12 col-md-4">
-                            <label class="form-label small mb-1">Cari</label>
-                            <input type="text" name="q" class="form-control form-control-sm" placeholder="Nama gereja, hari, kategori..." value="<?= htmlspecialchars($filterSearch); ?>">
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <label class="form-label small mb-1">Gereja</label>
-                            <select name="gereja" class="form-select form-select-sm">
-                                <option value="">Semua Gereja</option>
-                                <?php foreach ($gerejaList as $g): ?>
-                                <option value="<?= $g->id; ?>" <?= $filterGereja == $g->id ? 'selected' : ''; ?>><?= htmlspecialchars($g->nama_gereja); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <label class="form-label small mb-1">Hari</label>
-                            <select name="hari" class="form-select form-select-sm">
-                                <option value="">Semua Hari</option>
-                                <?php foreach (array('Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu','Spesial') as $h): ?>
-                                <option value="<?= $h; ?>" <?= $filterHari == $h ? 'selected' : ''; ?>><?= $h; ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-6 col-md-2">
-                            <button type="submit" class="btn btn-custom-primary btn-sm w-100"><i class="bx bx-filter me-1"></i>Filter</button>
-                        </div>
-                        <div class="col-6 col-md-2">
-                            <a href="<?= BASEURL; ?>admin/jadwal" class="btn btn-outline-secondary btn-sm w-100"><i class="bx bx-reset me-1"></i>Reset</a>
+                    <form method="GET" action="<?= BASEURL; ?>admin/jadwal">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12 col-md-4 col-lg-3">
+                                <label class="form-label small mb-1">Cari</label>
+                                <input type="text" name="q" class="form-control form-control-sm" placeholder="Nama gereja, hari, kategori..." value="<?= htmlspecialchars($filterSearch); ?>">
+                            </div>
+                            <div class="col-6 col-md-3 col-lg-2">
+                                <label class="form-label small mb-1">Gereja</label>
+                                <select name="gereja" class="form-select form-select-sm">
+                                    <option value="">Semua Gereja</option>
+                                    <?php foreach ($gerejaList as $g): ?>
+                                    <option value="<?= $g->id; ?>" <?= $filterGereja == $g->id ? 'selected' : ''; ?>><?= htmlspecialchars($g->nama_gereja); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-2 col-lg-2">
+                                <label class="form-label small mb-1">Hari</label>
+                                <select name="hari" class="form-select form-select-sm">
+                                    <option value="">Semua Hari</option>
+                                    <?php foreach (array('Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu','Spesial') as $h): ?>
+                                    <option value="<?= $h; ?>" <?= $filterHari == $h ? 'selected' : ''; ?>><?= $h; ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-3 col-lg-2">
+                                <label class="form-label small mb-1">Tgl Dari</label>
+                                <input type="date" name="tgl_dari" class="form-control form-control-sm" value="<?= htmlspecialchars($filterTglDari); ?>">
+                            </div>
+                            <div class="col-6 col-md-3 col-lg-2">
+                                <label class="form-label small mb-1">Tgl Sampai</label>
+                                <input type="date" name="tgl_sampai" class="form-control form-control-sm" value="<?= htmlspecialchars($filterTglSampai); ?>">
+                            </div>
+                            <div class="col-6 col-md-3 col-lg-2">
+                                <label class="form-label small mb-1">Jam Dari</label>
+                                <input type="time" name="jam_dari" class="form-control form-control-sm" value="<?= htmlspecialchars($filterJamDari); ?>">
+                            </div>
+                            <div class="col-6 col-md-3 col-lg-2">
+                                <label class="form-label small mb-1">Jam Sampai</label>
+                                <input type="time" name="jam_sampai" class="form-control form-control-sm" value="<?= htmlspecialchars($filterJamSampai); ?>">
+                            </div>
+                            <div class="col-12 col-md-3 col-lg-2 d-flex gap-2 align-items-end">
+                                <button type="submit" class="btn btn-custom-primary btn-sm flex-fill"><i class="bx bx-filter me-1"></i>Filter</button>
+                                <a href="<?= BASEURL; ?>admin/jadwal" class="btn btn-custom-outline btn-sm flex-fill"><i class="bx bx-reset me-1"></i>Reset</a>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -60,42 +76,47 @@
             <?php if (empty($jadwalGrouped)): ?>
             <div class="text-center py-5">
                 <i class="bx bx-calendar-x" style="font-size:3rem; color:#bbb;"></i>
-                <p class="mt-2 text-muted">Tidak ada jadwal ditemukan.</p>
+                <p class="mt-2 text-body-secondary">Tidak ada jadwal ditemukan.</p>
             </div>
             <?php else: ?>
-            <p class="text-muted small mb-2">Menampilkan jadwal dari <strong><?= count($jadwalGrouped); ?></strong> gereja</p>
+            <p class="text-body-secondary small mb-2">Menampilkan jadwal dari <strong><?= count($jadwalGrouped); ?></strong> gereja</p>
             <?php foreach ($jadwalGrouped as $gid => $group): ?>
             <div class="card mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center" style="background:#2C4463; color:#fff;">
-                    <h6 class="mb-0 fw-bold"><i class="bx bx-church me-1"></i><?= htmlspecialchars($group['nama_gereja']); ?></h6>
-                    <span class="badge bg-light text-dark"><?= count($group['daftar']); ?> jadwal</span>
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="background:#2C4463; color:#fff;">
+                    <h6 class="mb-0 fw-bold" style="color:#fff; font-size:clamp(0.8rem,1.8vw,1rem);"><i class="bx bx-church me-1"></i><?= htmlspecialchars($group['nama_gereja']); ?></h6>
+                    <span class="badge" style="background:#fff; color:#2C4463; flex-shrink:0;"><?= count($group['daftar']); ?> jadwal</span>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive">
-                    <table class="table table-hover mb-0 jadwal-group" style="font-size:0.85rem;">
+                    <div class="table-responsive-sm">
+                    <table class="table table-hover mb-0 jadwal-group">
                         <thead>
                             <tr>
-                                <th>#</th>
+                                <th class="d-none d-sm-table-cell">#</th>
                                 <th>Hari</th>
-                                <th>Tanggal</th>
+                                <th class="d-none d-md-table-cell">Tanggal</th>
                                 <th>Waktu</th>
                                 <th>Kategori</th>
-                                <th>Keterangan</th>
+                                <th class="d-none d-lg-table-cell">Keterangan</th>
                                 <th>Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php $no=1; foreach ($group['daftar'] as $j): ?>
                             <tr>
-                                <td><?= $no++; ?></td>
-                                <td><?= $j->hari; ?></td>
-                                <td><?= $j->tanggal ? date('d/m/Y', strtotime($j->tanggal)) : '-'; ?></td>
-                                <td><?= date('H:i', strtotime($j->waktu_mulai)); ?></td>
-                                <td><span class="badge" style="background:rgba(44,68,99,.1); color:#2C4463;"><?= $j->kategori; ?></span></td>
-                                <td><?= htmlspecialchars($j->keterangan ? $j->keterangan : '-'); ?></td>
+                                <td class="d-none d-sm-table-cell"><?= $no++; ?></td>
                                 <td>
-                                    <button class="btn btn-sm btn-custom-outline" onclick="editJadwal(<?= $j->id; ?>)"><i class="bx bx-edit"></i></button>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="hapusJadwal(<?= $j->id; ?>)"><i class="bx bx-trash"></i></button>
+                                    <span class="d-block d-sm-none small text-secondary"><?= $j->tanggal ? date('d/m', strtotime($j->tanggal)) : ''; ?></span>
+                                    <?= $j->hari; ?>
+                                </td>
+                                <td class="d-none d-md-table-cell"><?= $j->tanggal ? date('d/m/Y', strtotime($j->tanggal)) : '-'; ?></td>
+                                <td><?= date('H:i', strtotime($j->waktu_mulai)); ?></td>
+                                <td><span class="badge badge-kategori"><?= $j->kategori; ?></span></td>
+                                <td class="d-none d-lg-table-cell"><?= htmlspecialchars($j->keterangan ? $j->keterangan : '-'); ?></td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                    <button class="btn btn-sm btn-custom-outline px-2" onclick="editJadwal(<?= $j->id; ?>)"><i class="bx bx-edit"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger px-2" onclick="hapusJadwal(<?= $j->id; ?>)"><i class="bx bx-trash"></i></button>
+                                    </div>
                                 </td>
                             </tr>
                             <?php endforeach; ?>

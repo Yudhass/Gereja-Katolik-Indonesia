@@ -425,9 +425,9 @@
 
             <div class="error-info">
                 <p style="color: #a0aec0; font-size: 14px; margin-bottom: 15px;">Atau coba halaman berikut:</p>
-                <a href="<?= BASEURL; ?>dashboard" class="error-suggestion">Dashboard</a>
-                <a href="<?= BASEURL; ?>master" class="error-suggestion">Master Data</a>
-                <a href="<?= BASEURL; ?>distribusi" class="error-suggestion">Distribusi Linen</a>
+                <a href="<?= BASEURL; ?>admin/dashboard" class="error-suggestion">Dashboard</a>
+                <a href="<?= BASEURL; ?>admin/gereja" class="error-suggestion">Data Gereja</a>
+                <a href="<?= BASEURL; ?>admin/jadwal" class="error-suggestion">Jadwal Misa</a>
             </div>
         </div>
     </div>

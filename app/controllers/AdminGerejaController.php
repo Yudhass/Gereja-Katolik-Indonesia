@@ -27,7 +27,30 @@ class AdminGerejaController extends Controller
         $modelFoto = new ModelGerejaFoto();
         $modelSocial = new ModelGerejaSocialMedia();
 
-        $gerejaList = $model->all();
+        $filterSearch = isset($_GET['q']) ? sanitize($_GET['q'], 'string') : '';
+        $filterProvinsi = isset($_GET['provinsi']) ? sanitize($_GET['provinsi'], 'string') : '';
+
+        $sql = "SELECT * FROM gereja WHERE 1=1";
+        $params = array();
+
+        if (!empty($filterSearch)) {
+            $sql .= " AND (nama_gereja LIKE :q OR alamat LIKE :q2 OR provinsi LIKE :q3 OR kabupaten_kota LIKE :q4 OR kontak_telepon LIKE :q5)";
+            $like = "%{$filterSearch}%";
+            $params['q'] = $like;
+            $params['q2'] = $like;
+            $params['q3'] = $like;
+            $params['q4'] = $like;
+            $params['q5'] = $like;
+        }
+
+        if (!empty($filterProvinsi)) {
+            $sql .= " AND provinsi = :provinsi";
+            $params['provinsi'] = $filterProvinsi;
+        }
+
+        $sql .= " ORDER BY nama_gereja";
+
+        $gerejaList = $model->rawQuery($sql, $params);
         foreach ($gerejaList as $g) {
             $g->foto_list = $modelFoto->getByGereja($g->id);
             $g->social_media_list = $modelSocial->getByGereja($g->id);
@@ -38,7 +61,9 @@ class AdminGerejaController extends Controller
         $data = array(
             'title' => 'Data Gereja',
             'gerejaList' => $gerejaList,
-            'provinces' => $provinces
+            'provinces' => $provinces,
+            'filterSearch' => $filterSearch,
+            'filterProvinsi' => $filterProvinsi,
         );
         $this->view('admin/gereja/index', $data);
     }

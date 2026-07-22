@@ -111,6 +111,49 @@
   color: #fff;
 }
 
+[data-bs-theme=dark] .btn-custom-outline {
+  color: #dee2e6;
+  border-color: #dee2e6;
+}
+
+[data-bs-theme=dark] .btn-custom-outline:hover {
+  background: #dee2e6;
+  color: #212529;
+}
+
+[data-bs-theme=semi-dark] .btn-custom-outline {
+  color: #dee2e6;
+  border-color: #dee2e6;
+}
+
+[data-bs-theme=semi-dark] .btn-custom-outline:hover {
+  background: #dee2e6;
+  color: #212529;
+}
+
+.badge-kategori {
+  background: rgba(44,68,99,.1);
+  color: var(--gki-primary);
+}
+
+[data-bs-theme=dark] .badge-kategori {
+  background: rgba(255,255,255,.15);
+  color: #dee2e6;
+}
+
+[data-bs-theme=semi-dark] .badge-kategori {
+  background: rgba(255,255,255,.15);
+  color: #dee2e6;
+}
+
+[data-bs-theme=dark] .text-muted {
+  color: #adb5bd !important;
+}
+
+[data-bs-theme=semi-dark] .text-muted {
+  color: #adb5bd !important;
+}
+
 .btn-approve {
   background: #198754;
   border-color: #198754;
@@ -276,6 +319,11 @@
   padding: 1rem 1.25rem;
 }
 
+.card-header h1, .card-header h2, .card-header h3,
+.card-header h4, .card-header h5, .card-header h6 {
+  color: inherit;
+}
+
 .modal-header .modal-title {
   font-size: 1.05rem;
   font-weight: 600;
@@ -322,6 +370,32 @@ table.dataTable thead td {
 
 .table-hover tbody tr:hover {
   background-color: var(--gki-primary-lighter);
+}
+
+.jadwal-group {
+  font-size: 0.85rem;
+}
+
+.jadwal-group th,
+.jadwal-group td {
+  white-space: nowrap;
+  padding: 0.6rem 0.75rem;
+}
+
+.jadwal-group th:last-child,
+.jadwal-group td:last-child {
+  text-align: center;
+  width: 1%;
+}
+
+@media (max-width: 767px) {
+  .jadwal-group {
+    font-size: 0.8rem;
+  }
+  .jadwal-group th,
+  .jadwal-group td {
+    padding: 0.5rem 0.5rem;
+  }
 }
 
 .dataTables_wrapper .dataTables_length,

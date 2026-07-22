@@ -27,6 +27,10 @@ class AdminJadwalController extends Controller
         $filterGereja = isset($_GET['gereja']) ? (int)$_GET['gereja'] : 0;
         $filterHari = isset($_GET['hari']) ? sanitize($_GET['hari'], 'string') : '';
         $filterSearch = isset($_GET['q']) ? sanitize($_GET['q'], 'string') : '';
+        $filterTglDari = isset($_GET['tgl_dari']) ? sanitize($_GET['tgl_dari'], 'string') : '';
+        $filterTglSampai = isset($_GET['tgl_sampai']) ? sanitize($_GET['tgl_sampai'], 'string') : '';
+        $filterJamDari = isset($_GET['jam_dari']) ? sanitize($_GET['jam_dari'], 'string') : '';
+        $filterJamSampai = isset($_GET['jam_sampai']) ? sanitize($_GET['jam_sampai'], 'string') : '';
 
         $jadwalGrouped = array();
         $hariUrut = array('Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu','Spesial');
@@ -43,6 +47,10 @@ class AdminJadwalController extends Controller
                 if (stripos($j->tanggal, $kw) !== false) $match = true;
                 if (!$match) continue;
             }
+            if (!empty($filterTglDari) && !empty($j->tanggal) && $j->tanggal < $filterTglDari) continue;
+            if (!empty($filterTglSampai) && !empty($j->tanggal) && $j->tanggal > $filterTglSampai) continue;
+            if (!empty($filterJamDari) && $j->waktu_mulai < $filterJamDari) continue;
+            if (!empty($filterJamSampai) && $j->waktu_mulai > $filterJamSampai) continue;
             $gid = $j->gereja_id;
             if (!isset($jadwalGrouped[$gid])) {
                 $jadwalGrouped[$gid] = array(
@@ -59,7 +67,11 @@ class AdminJadwalController extends Controller
             'gerejaList' => $gerejaList,
             'filterGereja' => $filterGereja,
             'filterHari' => $filterHari,
-            'filterSearch' => $filterSearch
+            'filterSearch' => $filterSearch,
+            'filterTglDari' => $filterTglDari,
+            'filterTglSampai' => $filterTglSampai,
+            'filterJamDari' => $filterJamDari,
+            'filterJamSampai' => $filterJamSampai,
         );
         $this->view('admin/jadwal/index', $data);
     }
