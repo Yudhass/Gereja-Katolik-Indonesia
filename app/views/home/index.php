@@ -1,5 +1,12 @@
 <?php $this->view('layouts/guest_openTag', array('title' => $title)); ?>
 
+<?php if (!function_exists('buildPageUrl')): function buildPageUrl($page, $limit) {
+    $params = $_GET;
+    $params['page'] = $page;
+    $params['limit'] = $limit;
+    return '?' . http_build_query($params);
+} endif; ?>
+
 <style>
     .hero-section {
         background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 50%, var(--primary-dark) 100%);
@@ -233,12 +240,84 @@
         .lokasi-badge { font-size: 0.8rem; padding: 0.25rem 0.65rem; }
         .info-row-card { font-size: 0.9rem; }
         .site-footer { margin-bottom: 0; border-radius: 0; padding: 0.75rem 0; margin-top: 1rem; }
-        .filter-fab { display: flex; }
-        .maps-fab { display: none; }
-    }
-    @media (min-width: 768px) {
-        .maps-fab { display: flex; }
-    }
+    .filter-fab { display: flex; }
+    .maps-fab { display: none; }
+}
+
+.pagination-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1rem 0;
+    border-top: 1px solid #eee;
+    margin-top: 0.5rem;
+}
+.pagination-wrap .info {
+    font-size: 0.85rem;
+    color: #555;
+}
+.pagination-links {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+.pagination-links a,
+.pagination-links span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 0.5rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid #dee2e6;
+    color: #333;
+    background: #fff;
+    transition: all 0.15s;
+}
+.pagination-links a:hover {
+    background: var(--primary-light);
+    color: #fff;
+    border-color: var(--primary-light);
+}
+.pagination-links .active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+.pagination-links .disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+.limit-select {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: #555;
+}
+.limit-select select {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+    background: #fff;
+    cursor: pointer;
+}
+@media (max-width: 767px) {
+    .pagination-wrap { flex-direction: column; align-items: stretch; text-align: center; }
+    .pagination-links { justify-content: center; }
+    .limit-select { justify-content: center; }
+}
+
+@media (min-width: 768px) {
+    .maps-fab { display: flex; }
+}
 </style>
 
 <div class="hero-section">
@@ -510,6 +589,34 @@
         <?php endforeach; ?>
     </div>
     <?php endif; ?>
+
+    <?php if ($totalPages > 1 || $limit != 10): ?>
+    <div class="pagination-wrap">
+        <div class="info">Menampilkan <?= min($limit, $totalGereja); ?> dari <?= $totalGereja; ?> gereja</div>
+        <div class="limit-select">
+            <span>Tampil:</span>
+            <select onchange="window.location.href=buildPageUrl(1, this.value)">
+                <option value="10" <?= $limit == 10 ? 'selected' : ''; ?>>10</option>
+                <option value="20" <?= $limit == 20 ? 'selected' : ''; ?>>20</option>
+                <option value="50" <?= $limit == 50 ? 'selected' : ''; ?>>50</option>
+            </select>
+        </div>
+        <?php if ($totalPages > 1): ?>
+        <div class="pagination-links">
+            <a href="<?= $currentPage > 1 ? buildPageUrl(1, $limit) : '#'; ?>" class="<?= $currentPage <= 1 ? 'disabled' : ''; ?>" title="Halaman Pertama"><i class="bx bx-chevrons-left"></i></a>
+            <a href="<?= $currentPage > 1 ? buildPageUrl($currentPage - 1, $limit) : '#'; ?>" class="<?= $currentPage <= 1 ? 'disabled' : ''; ?>" title="Sebelumnya"><i class="bx bx-chevron-left"></i></a>
+            <?php
+            $start = max(1, min($currentPage - 2, $totalPages - 4));
+            $end = min($totalPages, max(5, $start + 4));
+            for ($i = $start; $i <= $end; $i++): ?>
+            <a href="<?= buildPageUrl($i, $limit); ?>" class="<?= $i == $currentPage ? 'active' : ''; ?>"><?= $i; ?></a>
+            <?php endfor; ?>
+            <a href="<?= $currentPage < $totalPages ? buildPageUrl($currentPage + 1, $limit) : '#'; ?>" class="<?= $currentPage >= $totalPages ? 'disabled' : ''; ?>" title="Selanjutnya"><i class="bx bx-chevron-right"></i></a>
+            <a href="<?= $currentPage < $totalPages ? buildPageUrl($totalPages, $limit) : '#'; ?>" class="<?= $currentPage >= $totalPages ? 'disabled' : ''; ?>" title="Halaman Terakhir"><i class="bx bx-chevrons-right"></i></a>
+        </div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
 </div>
 
 <footer class="site-footer">
@@ -535,6 +642,12 @@ function toggleFilterDrawer() {
     drawer.classList.toggle('active');
     overlay.classList.toggle('active');
     document.body.style.overflow = drawer.classList.contains('active') ? 'hidden' : '';
+}
+function buildPageUrl(page, limit) {
+    var params = new URLSearchParams(window.location.search);
+    params.set('page', page);
+    params.set('limit', limit);
+    return '?' + params.toString();
 }
 </script>
 <?php $this->view('layouts/guest_closeTag'); ?>

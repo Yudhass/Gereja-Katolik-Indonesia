@@ -87,10 +87,18 @@ class HomeController extends Controller
             $gerejaList = $filtered;
         }
 
+        $totalAll = count($gerejaList);
+        $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+        $limit = isset($_GET['limit']) ? max(1, min(50, (int)$_GET['limit'])) : 10;
+        $totalPages = max(1, ceil($totalAll / $limit));
+        $page = min($page, $totalPages);
+        $offset = ($page - 1) * $limit;
+        $gerejaPage = array_slice($gerejaList, $offset, $limit);
+
         $fotoByGereja = array();
-        if (!empty($gerejaList)) {
+        if (!empty($gerejaPage)) {
             $ids = array();
-            foreach ($gerejaList as $g) { $ids[] = $g->id; }
+            foreach ($gerejaPage as $g) { $ids[] = $g->id; }
             $fotoRows = $modelGereja->rawQuery(
                 "SELECT gereja_id, foto_url FROM gereja_foto WHERE gereja_id IN (" . implode(',', $ids) . ") ORDER BY urutan ASC, id ASC"
             );
@@ -103,8 +111,11 @@ class HomeController extends Controller
 
         $data = array(
             'title' => 'Beranda',
-            'gerejaList' => $gerejaList,
-            'totalGereja' => count($gerejaList),
+            'gerejaList' => $gerejaPage,
+            'totalGereja' => $totalAll,
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'limit' => $limit,
             'provinsiList' => $provinsiList,
             'kabupatenList' => $kabupatenList,
             'kecamatanList' => $kecamatanList,

@@ -146,6 +146,13 @@ $mapLng = (float)$gereja->longitude;
                 <div class="card-header"><i class="bx bx-info-circle card-header-icon"></i>Informasi Gereja</div>
                 <div class="card-body">
                     <div class="info-item">
+                        <i class="bx bx-church info-icon"></i>
+                        <div>
+                            <div class="info-label">Nama Gereja</div>
+                            <div class="info-value fw-bold" style="font-size:1.05rem;"><?= htmlspecialchars($gereja->nama_gereja); ?></div>
+                        </div>
+                    </div>
+                    <div class="info-item">
                         <i class="bx bx-map-pin info-icon"></i>
                         <div>
                             <div class="info-label">Alamat</div>
