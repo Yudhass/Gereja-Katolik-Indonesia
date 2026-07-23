@@ -1,15 +1,20 @@
 <?php $this->view('layouts/openTag', array('title' => $title)); ?>
 <style>
     .welcome-section { background: linear-gradient(135deg, #2C4463 0%, #1A2D47 100%); border-radius:14px; padding:1.5rem 2rem; color:#fff; }
+    .welcome-section h5 { color:#fff; }
+    .welcome-section h5 i { color:#fff; }
+    .welcome-section p { opacity:1; }
     .stat-card { transition:transform .2s ease, box-shadow .2s ease; border-radius:12px; border:none; box-shadow:0 2px 12px rgba(0,0,0,.06); }
     .stat-card:hover { transform:translateY(-4px); box-shadow:0 8px 25px rgba(0,0,0,.12); }
     .stat-value { font-size:1.75rem; font-weight:700; }
+    .stat-label { color:#212529 !important; }
     .icon-box { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
     .dash-card { border-radius:12px; border:none; box-shadow:0 2px 12px rgba(0,0,0,.06); }
     .dash-card .table thead th { background:#2C4463; color:#fff; font-weight:600; font-size:.8rem; border-color:#1A2D47; padding:.6rem .75rem; }
     .dash-card .table tbody td { padding:.6rem .75rem; vertical-align:middle; font-size:.85rem; }
     .dash-card .table-hover tbody tr:hover { background:rgba(44,68,99,.04); }
-    .dash-card .card-body-empty { padding:2rem; text-align:center; color:#adb5bd; font-size:.9rem; }
+    .dash-card .card-body-empty { padding:2rem; text-align:center; color:#495057; font-size:.9rem; }
+    .dash-card .text-muted { color:#495057 !important; }
 </style>
 <body>
 <div class="wrapper">
@@ -21,7 +26,7 @@
             <div class="welcome-section mb-4 d-flex align-items-center justify-content-between">
                 <div>
                     <h5 class="mb-0 fw-bold"><i class="bx bx-dashboard me-2"></i>Dashboard Admin</h5>
-                    <p class="mb-0 mt-1 opacity-75 small">Selamat datang di panel admin Gereja Katolik Indonesia</p>
+                    <p class="mb-0 mt-1 small">Selamat datang di panel admin Gereja Katolik Indonesia</p>
                 </div>
                 <div class="d-none d-sm-block">
                     <span class="badge bg-light text-dark px-3 py-2 rounded-pill">

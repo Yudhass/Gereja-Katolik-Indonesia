@@ -1,0 +1,35 @@
+[2026-07-23 09:30:45] [ERROR] [Parse Error] parse error | File: unknown:0 | Context: Array
+(
+    [errno] => 4
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\views\maps\index.php
+    [line] => 331
+)
+
+[2026-07-23 09:30:47] [ERROR] [Parse Error] parse error | File: unknown:0 | Context: Array
+(
+    [errno] => 4
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\views\maps\index.php
+    [line] => 331
+)
+
+[2026-07-23 09:34:16] [ERROR] [Parse Error] parse error | File: unknown:0 | Context: Array
+(
+    [errno] => 4
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\views\maps\index.php
+    [line] => 331
+)
+
+[2026-07-23 09:34:48] [ERROR] [Parse Error] parse error | File: unknown:0 | Context: Array
+(
+    [errno] => 4
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\views\maps\index.php
+    [line] => 331
+)
+
+[2026-07-23 09:34:49] [ERROR] [Parse Error] parse error | File: unknown:0 | Context: Array
+(
+    [errno] => 4
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\views\maps\index.php
+    [line] => 331
+)
+

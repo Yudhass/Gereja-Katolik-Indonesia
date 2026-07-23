@@ -2,6 +2,7 @@
 require_once dirname(__FILE__) . '/../models/ModelGereja.php';
 require_once dirname(__FILE__) . '/../models/ModelJadwalMisa.php';
 require_once dirname(__FILE__) . '/../models/ModelGerejaFoto.php';
+require_once dirname(__FILE__) . '/../models/ModelGerejaSocialMedia.php';
 
 class MapsController extends Controller
 {
@@ -10,6 +11,7 @@ class MapsController extends Controller
         $modelGereja = new ModelGereja();
         $modelJadwal = new ModelJadwalMisa();
         $modelFoto = new ModelGerejaFoto();
+        $modelSocial = new ModelGerejaSocialMedia();
 
         $filterProvinsi = isset($_GET['provinsi']) ? sanitize($_GET['provinsi'], 'string') : '';
         $filterKabupaten = isset($_GET['kabupaten']) ? sanitize($_GET['kabupaten'], 'string') : '';
@@ -37,6 +39,7 @@ class MapsController extends Controller
         $gerejaList = array();
         $allJadwal = array();
         $allFoto = array();
+        $allSocial = array();
 
         foreach ($allGereja as $g) {
             if (empty($g->latitude) || empty($g->longitude)) continue;
@@ -62,7 +65,14 @@ class MapsController extends Controller
             $allJadwal[$g->id] = $jadwal;
 
             $fotoList = $modelFoto->getByGereja($g->id);
-            $allFoto[$g->id] = !empty($fotoList) ? $fotoList[0]->foto_url : '';
+            $fotoUrls = array();
+            foreach ($fotoList as $f) {
+                $fotoUrls[] = $f->foto_url;
+            }
+            $allFoto[$g->id] = $fotoUrls;
+
+            $socialList = $modelSocial->getByGereja($g->id);
+            $allSocial[$g->id] = $socialList;
         }
 
         $data = array(
@@ -70,6 +80,7 @@ class MapsController extends Controller
             'gerejaList' => $gerejaList,
             'allJadwal' => $allJadwal,
             'allFoto' => $allFoto,
+            'allSocial' => $allSocial,
             'provinsiList' => $provinsiList,
             'kabupatenList' => $kabupatenList,
             'kecamatanList' => $kecamatanList,

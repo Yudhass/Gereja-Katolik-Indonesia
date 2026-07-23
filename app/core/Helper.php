@@ -845,6 +845,91 @@ if (!function_exists('safe_json_decode')) {
 
 /**
  * ============================================================================
+ * MAPS & COORDINATES HELPER FUNCTIONS
+ * ============================================================================
+ */
+
+/**
+ * Extract coordinates (latitude, longitude) from Google Maps URL
+ * 
+ * Supports multiple Google Maps URL formats:
+ * - https://www.google.com/maps/@-6.123456,106.789012,15z
+ * - https://maps.google.com/?q=-6.123456,106.789012
+ * - https://www.google.com/maps/place/.../@-6.123456,106.789012,...
+ * - https://www.google.com/maps/search/-6.123456,106.789012
+ * 
+ * @param string $link_maps Google Maps URL
+ * @param float $defaultLat Default latitude if extraction fails
+ * @param float $defaultLng Default longitude if extraction fails
+ * @return array Array with 'lat' and 'lng' keys
+ */
+if (!function_exists('extractCoordinatesFromMapsUrl')) {
+    function extractCoordinatesFromMapsUrl($link_maps, $defaultLat = null, $defaultLng = null)
+    {
+        $lat = $defaultLat;
+        $lng = $defaultLng;
+        
+        if (empty($link_maps)) {
+            return array('lat' => $lat, 'lng' => $lng);
+        }
+        
+        // Trim whitespace
+        $link_maps = trim($link_maps);
+        
+        // Pattern 0 (PRIORITY): !3d and !4d from Google Maps place data
+        // These are the most accurate coordinates from Google Maps
+        // They appear as !3d<lat>...!4d<lng> in the URL
+        if (preg_match('/!3d(-?\d+\.?\d*)/', $link_maps, $m1) && preg_match('/!4d(-?\d+\.?\d*)/', $link_maps, $m2)) {
+            $lat_val = (float)$m1[1];
+            $lng_val = (float)$m2[1];
+            if ($lat_val >= -90 && $lat_val <= 90 && $lng_val >= -180 && $lng_val <= 180) {
+                return array('lat' => $lat_val, 'lng' => $lng_val);
+            }
+        }
+        
+        // Pattern 1: @-6.123456,106.789012 (from google maps direct share or maps/@lat,lng format)
+        if (preg_match('/@(-?\d+\.?\d*),(-?\d+\.?\d*)/', $link_maps, $m)) {
+            if (isset($m[1], $m[2]) && !empty($m[1]) && !empty($m[2])) {
+                $lat_val = (float)$m[1];
+                $lng_val = (float)$m[2];
+                // Validate latitude range: -90 to 90
+                if ($lat_val >= -90 && $lat_val <= 90) {
+                    // Validate longitude range: -180 to 180
+                    if ($lng_val >= -180 && $lng_val <= 180) {
+                        return array('lat' => $lat_val, 'lng' => $lng_val);
+                    }
+                }
+            }
+        }
+        
+        // Pattern 2: ?q=-6.123456,106.789012 or &q=-6.123456,106.789012
+        if (preg_match('/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/', $link_maps, $m)) {
+            if (isset($m[1], $m[2]) && !empty($m[1]) && !empty($m[2])) {
+                $lat_val = (float)$m[1];
+                $lng_val = (float)$m[2];
+                if ($lat_val >= -90 && $lat_val <= 90 && $lng_val >= -180 && $lng_val <= 180) {
+                    return array('lat' => $lat_val, 'lng' => $lng_val);
+                }
+            }
+        }
+        
+        // Pattern 3: /search/-6.123456,106.789012 format
+        if (preg_match('/\/search\/(-?\d+\.?\d*),(-?\d+\.?\d*)/', $link_maps, $m)) {
+            if (isset($m[1], $m[2]) && !empty($m[1]) && !empty($m[2])) {
+                $lat_val = (float)$m[1];
+                $lng_val = (float)$m[2];
+                if ($lat_val >= -90 && $lat_val <= 90 && $lng_val >= -180 && $lng_val <= 180) {
+                    return array('lat' => $lat_val, 'lng' => $lng_val);
+                }
+            }
+        }
+        
+        return array('lat' => $lat, 'lng' => $lng);
+    }
+}
+
+/**
+ * ============================================================================
  * CONDITIONAL FEATURE DETECTION
  * Untuk determine apa yang bisa digunakan dalam environment saat ini
  * ============================================================================

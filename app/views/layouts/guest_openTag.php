@@ -27,7 +27,8 @@
         .btn-outline-church { border: 2px solid var(--primary); color: var(--primary); background: transparent; }
         .btn-outline-church:hover { background: var(--primary); color: #fff; }
         @media (max-width: 767px) {
-            body { padding-bottom: 76px; }
+            body { padding-bottom: 76px; font-size: 16px; }
+            input, select, textarea, button { font-size: 16px !important; }
         }
     </style>
     <?php if (isset($css)): foreach ($css as $csss): ?>

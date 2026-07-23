@@ -18,6 +18,15 @@ foreach ($gerejaList as $g) {
             );
         }
     }
+    $mapLat = (float)$g->latitude;
+    $mapLng = (float)$g->longitude;
+    
+    $socmedData = array();
+    if (isset($allSocial[$g->id])) {
+        foreach ($allSocial[$g->id] as $s) {
+            $socmedData[] = array('platform' => $s->platform, 'url' => $s->url);
+        }
+    }
     $gerejaJson[] = array(
         'id' => $g->id,
         'nama' => $g->nama_gereja,
@@ -29,10 +38,12 @@ foreach ($gerejaList as $g) {
         'telepon' => $g->kontak_telepon,
         'deskripsi' => $g->deskripsi,
         'slug' => $g->slug ? $g->slug : $g->id,
-        'lat' => (float)$g->latitude,
-        'lng' => (float)$g->longitude,
-        'foto' => isset($allFoto[$g->id]) ? $allFoto[$g->id] : '',
-        'jadwal' => $jdw
+        'lat' => $mapLat,
+        'lng' => $mapLng,
+        'link_maps' => $g->link_maps,
+        'foto' => isset($allFoto[$g->id]) ? $allFoto[$g->id] : array(),
+        'jadwal' => $jdw,
+        'social' => $socmedData
     );
 }
 $gerejaJsonEncoded = json_encode($gerejaJson);
@@ -128,11 +139,44 @@ $gerejaJsonEncoded = json_encode($gerejaJson);
     .sheet-body .jadwal-sheet .jw-ket { color: #555; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.78rem; }
     .sheet-body .jadwal-sheet .jw-badge { background: rgba(44,68,99,0.1); color: #2C4463; font-weight: 700; font-size: 0.58rem; padding: 0.1rem 0.35rem; border-radius: 3px; flex-shrink: 0; }
     .sheet-body .sheet-deskripsi { font-size: 0.83rem; color: #444; line-height: 1.6; margin-top: 0.3rem; }
-    .sheet-body .sheet-foto { width: 100%; height: 160px; object-fit: cover; border-radius: 12px; margin-bottom: 0.5rem; background: #eee; }
+    .sheet-body .sheet-foto-wrap { position: relative; border-radius: 12px; overflow: hidden; margin-bottom: 0.5rem; }
+    .sheet-body .sheet-foto-wrap img { width: 100%; height: 160px; object-fit: cover; background: #eee; display: none; }
+    .sheet-body .sheet-foto-wrap img.active { display: block; }
+    .sheet-body .sheet-foto-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.35); color: #fff; border: none; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1rem; transition: background .2s; z-index: 2; }
+    .sheet-body .sheet-foto-nav:hover { background: rgba(0,0,0,0.6); }
+    .sheet-body .sheet-foto-nav.prev { left: 6px; }
+    .sheet-body .sheet-foto-nav.next { right: 6px; }
+    .sheet-body .sheet-foto-dots { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; }
+    .sheet-body .sheet-foto-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer; }
+    .sheet-body .sheet-foto-dots span.active { background: #fff; }
     .sheet-body .sheet-foto-placeholder { width: 100%; height: 100px; background: linear-gradient(135deg, var(--primary-light), var(--primary-dark)); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; }
     .sheet-body .sheet-foto-placeholder i { font-size: 3rem; color: rgba(255,255,255,0.3); }
+    .sheet-body .socmed-sheet { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.3rem; }
     .sheet-footer { display: flex; gap: 0.6rem; padding: 0.7rem 1.1rem; padding-bottom: calc(0.7rem + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #f0f0f0; flex-shrink: 0; }
     .sheet-footer .btn-sheet { flex: 1; border-radius: 12px; padding: 0.5rem 1rem; font-weight: 600; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; border: none; cursor: pointer; }
+    .socmed-sheet-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; border-radius: 8px; font-size: 0.72rem; font-weight: 600; text-decoration: none; transition: all .2s; border: none; cursor: pointer; }
+    .socmed-sheet-btn:hover { transform: translateY(-1px); }
+    .socmed-sheet-btn .bx, .socmed-sheet-btn .bxl { font-size: 1rem; }
+    .ssocmed-website { background: #2C4463; color: #fff; }
+    .ssocmed-website:hover { background: #1A2D47; color: #fff; }
+    .ssocmed-instagram { background: linear-gradient(135deg, #833AB4, #FD1D1D, #F77737); color: #fff; }
+    .ssocmed-instagram:hover { color: #fff; }
+    .ssocmed-facebook { background: #1877F2; color: #fff; }
+    .ssocmed-facebook:hover { background: #0f6bd6; color: #fff; }
+    .ssocmed-twitter { background: #1DA1F2; color: #fff; }
+    .ssocmed-twitter:hover { background: #0d8bda; color: #fff; }
+    .ssocmed-youtube { background: #FF0000; color: #fff; }
+    .ssocmed-youtube:hover { background: #d60000; color: #fff; }
+    .ssocmed-tiktok { background: #010101; color: #fff; }
+    .ssocmed-tiktok:hover { background: #333; color: #fff; }
+    .ssocmed-linkedin { background: #0A66C2; color: #fff; }
+    .ssocmed-linkedin:hover { background: #004182; color: #fff; }
+    .ssocmed-whatsapp { background: #25D366; color: #fff; }
+    .ssocmed-whatsapp:hover { background: #1da851; color: #fff; }
+    .ssocmed-telegram { background: #0088CC; color: #fff; }
+    .ssocmed-telegram:hover { background: #0077b3; color: #fff; }
+    .ssocmed-other { background: #6c757d; color: #fff; }
+    .ssocmed-other:hover { background: #5a6268; color: #fff; }
     .sheet-footer .btn-sheet-primary { background: var(--primary); color: #fff; }
     .sheet-footer .btn-sheet-primary:hover { background: var(--primary-dark); color: #fff; }
     .sheet-footer .btn-sheet-outline { background: transparent; border: 1.5px solid var(--primary); color: var(--primary); }
@@ -155,7 +199,7 @@ $gerejaJsonEncoded = json_encode($gerejaJson);
         .leaflet-control-attribution { margin-bottom: 52px !important; font-size: 0.6rem !important; }
         .filter-drawer { width: 290px; }
         .sheet-panel { max-height: 68vh; }
-        .sheet-body .sheet-foto { height: 130px; }
+        .sheet-body .sheet-foto-wrap img { height: 130px; }
     }
 </style>
 
@@ -280,8 +324,22 @@ function showGerejaDetail(idx) {
 
     var body = "";
 
-    if (d.foto) {
-        body += "<img src=\"" + escAttr(d.foto) + "\" class=\"sheet-foto\" alt=\"" + escAttr(d.nama) + "\" onerror=\"this.style.display=\'none\'\">";
+    var fotoList = (Array.isArray(d.foto) && d.foto.length > 0) ? d.foto : [];
+    if (fotoList.length > 0) {
+        body += "<div class=\"sheet-foto-wrap\" id=\"fotoWrap\">";
+        for (var fi = 0; fi < fotoList.length; fi++) {
+            body += "<img src=\"" + escAttr(fotoList[fi]) + "\" class=\"" + (fi === 0 ? "active" : "") + "\" alt=\"" + escAttr(d.nama) + "\" onerror=\"this.style.display=\'none\'\">";
+        }
+        if (fotoList.length > 1) {
+            body += "<button class=\"sheet-foto-nav prev\" onclick=\"fotoPrev()\"><i class=\"bx bx-chevron-left\"></i></button>";
+            body += "<button class=\"sheet-foto-nav next\" onclick=\"fotoNext()\"><i class=\"bx bx-chevron-right\"></i></button>";
+            body += "<div class=\"sheet-foto-dots\" id=\"fotoDots\">";
+            for (var fi = 0; fi < fotoList.length; fi++) {
+                body += "<span class=\"" + (fi === 0 ? "active" : "") + "\" onclick=\"fotoGo(" + fi + ")\"></span>";
+            }
+            body += "</div>";
+        }
+        body += "</div>";
     } else {
         body += "<div class=\"sheet-foto-placeholder\"><i class=\"bx bx-church\"></i></div>";
     }
@@ -291,6 +349,27 @@ function showGerejaDetail(idx) {
     if (d.kecamatan) { body += "<div class=\"info-row\"><i class=\"bx bx-detail\"></i><div>Kec. " + escHtml(d.kecamatan) + "</div></div>"; }
     if (d.kelurahan) { body += "<div class=\"info-row\"><i class=\"bx bx-home\"></i><div>Kel. " + escHtml(d.kelurahan) + "</div></div>"; }
     if (d.telepon) { body += "<div class=\"info-row\"><i class=\"bx bx-phone\"></i><div>" + escHtml(d.telepon) + "</div></div>"; }
+
+    if (d.social && d.social.length > 0) {
+        body += "<div class=\"section-label\"><i class=\"bx bx-share-alt me-1\"></i>Sosial Media</div>";
+        body += "<div class=\"socmed-sheet\">";
+        for (var si = 0; si < d.social.length; si++) {
+            var s = d.social[si];
+            var sCls = "ssocmed-other";
+            var sIcon = "bx bx-link";
+            if (s.platform == "website") { sCls = "ssocmed-website"; sIcon = "bx bx-globe"; }
+            else if (s.platform == "instagram") { sCls = "ssocmed-instagram"; sIcon = "bx bxl-instagram"; }
+            else if (s.platform == "facebook") { sCls = "ssocmed-facebook"; sIcon = "bx bxl-facebook"; }
+            else if (s.platform == "twitter") { sCls = "ssocmed-twitter"; sIcon = "bx bxl-twitter"; }
+            else if (s.platform == "youtube") { sCls = "ssocmed-youtube"; sIcon = "bx bxl-youtube"; }
+            else if (s.platform == "tiktok") { sCls = "ssocmed-tiktok"; sIcon = "bx bxl-tiktok"; }
+            else if (s.platform == "linkedin") { sCls = "ssocmed-linkedin"; sIcon = "bx bxl-linkedin"; }
+            else if (s.platform == "whatsapp") { sCls = "ssocmed-whatsapp"; sIcon = "bx bxl-whatsapp"; }
+            else if (s.platform == "telegram") { sCls = "ssocmed-telegram"; sIcon = "bx bxl-telegram"; }
+            body += "<a href=\"" + escAttr(s.url) + "\" target=\"_blank\" rel=\"noopener\" class=\"socmed-sheet-btn " + sCls + "\"><i class=\"" + sIcon + "\"></i>" + escHtml(s.platform.charAt(0).toUpperCase() + s.platform.slice(1)) + "</a>";
+        }
+        body += "</div>";
+    }
 
     if (d.deskripsi) {
         body += "<div class=\"section-label\"><i class=\"bx bx-info-circle me-1\"></i>Tentang</div>";
@@ -322,14 +401,32 @@ function showGerejaDetail(idx) {
     }
 
     document.getElementById("sheetBody").innerHTML = body;
+    var mapsUrl = d.link_maps ? d.link_maps : ("https://www.google.com/maps?q=" + d.lat + "," + d.lng);
     document.getElementById("sheetFooter").innerHTML =
+        "<a href=\"" + mapsUrl + "\" target=\"_blank\" class=\"btn-sheet btn-sheet-outline\"><i class=\"bx bx-map\"></i> Lihat Lokasi</a>" +
         "<a href=\"https://www.google.com/maps/dir/?api=1&destination=" + d.lat + "," + d.lng + "\" target=\"_blank\" class=\"btn-sheet btn-sheet-outline\"><i class=\"bx bx-navigation\"></i> Rute</a>" +
-        "<a href=\"" + BASEURL + "gereja/" + encodeURIComponent(d.slug) + "?from=maps\" class=\"btn-sheet btn-sheet-primary\"><i class=\"bx bx-detail\"></i> Halaman Detail</a>";
+        "<a href=\"" + BASEURL + "gereja/" + encodeURIComponent(d.slug) + "?from=maps\" class=\"btn-sheet btn-sheet-primary\"><i class=\"bx bx-detail\"></i> Detail</a>";
 
+    fotoIdx = 0;
     document.getElementById("sheetPanel").classList.add("open");
     document.getElementById("sheetOverlay").classList.add("active");
     document.body.style.overflow = "hidden";
 }
+
+var fotoIdx = 0;
+function fotoShow(n) {
+    var wrap = document.getElementById("fotoWrap");
+    if (!wrap) return;
+    var imgs = wrap.querySelectorAll("img");
+    var dots = wrap.querySelectorAll(".sheet-foto-dots span");
+    for (var i = 0; i < imgs.length; i++) imgs[i].classList.remove("active");
+    for (var i = 0; i < dots.length; i++) dots[i].classList.remove("active");
+    if (imgs[n]) imgs[n].classList.add("active");
+    if (dots[n]) dots[n].classList.add("active");
+}
+function fotoPrev() { var wrap = document.getElementById("fotoWrap"); if (!wrap) return; var imgs = wrap.querySelectorAll("img"); fotoIdx = (fotoIdx - 1 + imgs.length) % imgs.length; fotoShow(fotoIdx); }
+function fotoNext() { var wrap = document.getElementById("fotoWrap"); if (!wrap) return; var imgs = wrap.querySelectorAll("img"); fotoIdx = (fotoIdx + 1) % imgs.length; fotoShow(fotoIdx); }
+function fotoGo(n) { fotoIdx = n; fotoShow(n); }
 
 function closeSheet() {
     document.getElementById("sheetPanel").classList.remove("open");
@@ -342,8 +439,8 @@ function escAttr(s) { if (!s) return ""; return s.replace(/\"/g, "&quot;").repla
 ';
 
 foreach ($gerejaList as $i => $g) {
-    $lat = $g->latitude;
-    $lng = $g->longitude;
+    $lat = (float)$g->latitude;
+    $lng = (float)$g->longitude;
 
     $mapScripts .= "
 var icon = L.divIcon({html: '<div style=\"background:#2C4463;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:1rem;\"><i class=\"bx bx-church\"></i></div>', className: '', iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -18]});

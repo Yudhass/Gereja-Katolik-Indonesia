@@ -1,5 +1,15 @@
 <?php
 
+function str_getcsv_compat($input, $delimiter = ';')
+{
+    $fh = fopen('php://temp', 'r+');
+    fwrite($fh, $input);
+    rewind($fh);
+    $result = fgetcsv($fh, 0, $delimiter);
+    fclose($fh);
+    return $result;
+}
+
 function run_wilayah_seeder()
 {
     require_once dirname(__FILE__) . '/../../core/Database.php';
@@ -30,7 +40,7 @@ function run_wilayah_seeder()
         }
 
         $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $header = str_getcsv(array_shift($lines), ';');
+        $header = str_getcsv_compat(array_shift($lines), ';');
         $fields = $cfg['fields'];
         $totalRows = count($lines);
         $columns = implode(', ', $fields);
@@ -45,7 +55,7 @@ function run_wilayah_seeder()
 
         try {
             foreach ($lines as $i => $line) {
-                $values = str_getcsv($line, ';');
+                $values = str_getcsv_compat($line, ';');
                 $data = array();
                 foreach ($fields as $j => $field) {
                     $data[$field] = isset($values[$j]) ? $values[$j] : '';
