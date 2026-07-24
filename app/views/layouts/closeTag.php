@@ -1,5 +1,6 @@
 <script src="<?= BASEURL; ?>assets/js/jquery.min.js"></script>
 <script src="<?= BASEURL; ?>assets/js/bootstrap.bundle.min.js"></script>
+<script src="<?= BASEURL; ?>assets/plugins/metismenu/js/metisMenu.min.js"></script>
 <script src="<?= BASEURL; ?>assets/plugins/notifications/js/lobibox.min.js"></script>
 <script src="<?= BASEURL; ?>assets/plugins/notifications/js/notifications.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.26.17/dist/sweetalert2.all.min.js"></script>

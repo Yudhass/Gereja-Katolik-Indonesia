@@ -33,6 +33,21 @@ foreach ($provinces as $p) {
         border-color: var(--gki-primary) !important;
         box-shadow: 0 0 0 0.2rem rgba(44, 68, 99, 0.12) !important;
     }
+    .filter-sm .select2-selection--single {
+        min-height: 31px !important;
+    }
+    .filter-sm .select2-selection--single .select2-selection__rendered {
+        line-height: 29px !important;
+        font-size: 0.875rem !important;
+    }
+    .filter-sm .select2-selection--single .select2-selection__arrow {
+        height: 29px !important;
+    }
+    .form-control-sm.match-select2 {
+        height: 31px;
+        border-radius: 8px;
+        font-size: 0.875rem;
+    }
 </style>
 <body>
 <div class="wrapper">
@@ -55,11 +70,11 @@ foreach ($provinces as $p) {
                     <form method="GET" action="<?= BASEURL; ?>admin/gereja" class="row g-2 align-items-end">
                         <div class="col-12 col-md-5">
                             <label class="form-label small mb-1">Cari</label>
-                            <input type="text" name="q" class="form-control form-control-sm" placeholder="Nama gereja, alamat, provinsi..." value="<?= htmlspecialchars($filterSearch); ?>">
+                            <input type="text" name="q" class="form-control form-control-sm match-select2" placeholder="Nama gereja, alamat, provinsi..." value="<?= htmlspecialchars($filterSearch); ?>">
                         </div>
                         <div class="col-6 col-md-4">
                             <label class="form-label small mb-1">Provinsi</label>
-                            <select name="provinsi" class="form-select form-select-sm">
+                            <select name="provinsi" class="form-select form-select-sm" id="filterProvinsi">
                                 <option value="">Semua Provinsi</option>
                                 <?php foreach ($provinces as $p): ?>
                                 <option value="<?= htmlspecialchars($p->name); ?>" <?= $filterProvinsi == $p->name ? 'selected' : ''; ?>><?= htmlspecialchars($p->name); ?></option>
@@ -76,25 +91,26 @@ foreach ($provinces as $p) {
 
             <div class="card">
                 <div class="card-body">
-                    <div class="table-responsive">
-                    <table id="table-gereja" class="table table-hover" style="font-size:0.85rem;">
+                    <div class="table-responsive" style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                    <table id="table-gereja" class="table table-hover" style="font-size:0.85rem;width:100%;">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Nama Gereja</th>
-                                <th>Wilayah</th>
-                                <th>Kontak</th>
-                                <th>Foto</th>
-                                <th>Sosial Media</th>
-                                <th>Aksi</th>
+                                <th style="width:15px;">#</th>
+                                <th style="width:25%;">Nama Gereja</th>
+                                <th style="width:25%;">Wilayah</th>
+                                <th style="width:10%;">Kontak</th>
+                                <th style="width:10%;">Foto</th>
+                                <th style="width:12%;">Sosial Media</th>
+                                <th style="width:5%;">Maps</th>
+                                <th style="width:10%;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php $no=1; foreach ($gerejaList as $g): ?>
                             <tr>
-                                <td><?= $no++; ?></td>
-                                <td class="fw-bold"><?= htmlspecialchars($g->nama_gereja); ?></td>
-                                <td><?= htmlspecialchars($g->provinsi); ?>, <?= htmlspecialchars($g->kabupaten_kota); ?><?= $g->kecamatan ? ', ' . htmlspecialchars($g->kecamatan) : ''; ?><?= $g->kelurahan ? ', ' . htmlspecialchars($g->kelurahan) : ''; ?></td>
+                                <td style="width:15px;text-align:center;padding-left:2px;padding-right:2px;"><?= $no++; ?></td>
+                                <td class="fw-bold" style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->nama_gereja); ?></td>
+                                <td style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->provinsi); ?>, <?= htmlspecialchars($g->kabupaten_kota); ?><?= $g->kecamatan ? ', ' . htmlspecialchars($g->kecamatan) : ''; ?><?= $g->kelurahan ? ', ' . htmlspecialchars($g->kelurahan) : ''; ?></td>
                                 <td><?= htmlspecialchars($g->kontak_telepon ? $g->kontak_telepon : '-'); ?></td>
                                 <td>
                                     <?php if (!empty($g->foto_list)): ?>
@@ -130,8 +146,17 @@ foreach ($provinces as $p) {
                                     -
                                     <?php endif; ?>
                                 </td>
-                                <td>
-                                    <button class="btn btn-sm btn-custom-outline" onclick="editGereja(<?= $g->id; ?>)"><i class="bx bx-edit"></i></button>
+                                <td class="text-center">
+                                    <?php if (!empty($g->link_maps)): ?>
+                                    <a href="<?= htmlspecialchars($g->link_maps); ?>" target="_blank" class="btn btn-sm px-1 py-0" style="border:none;font-size:1.3rem;" title="Buka Google Maps">
+                                        <i class="bx bx-globe" style="color:#2C4463;"></i>
+                                    </a>
+                                    <?php else: ?>
+                                    -
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-nowrap">
+                                    <a href="<?= BASEURL; ?>admin/gereja/edit/<?= $g->id; ?>?q=<?= urlencode($filterSearch); ?>&provinsi=<?= urlencode($filterProvinsi); ?>" class="btn btn-sm btn-custom-outline"><i class="bx bx-edit"></i></a>
                                     <button class="btn btn-sm btn-outline-danger" onclick="hapusGereja(<?= $g->id; ?>)"><i class="bx bx-trash"></i></button>
                                 </td>
                             </tr>
@@ -484,6 +509,7 @@ function editLoadCascade(kabName, kecName, kelName) {
             s.src = 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js';
             s.onload = function() {
                 $(function() {
+                    $('#filterProvinsi').select2({ width: '100%', containerCssClass: 'filter-sm', dropdownCssClass: 'filter-sm-dropdown' });
                     initSel2('addProvinsi', 'modalAdd');
 
                     $('#addProvinsi').on('change', function() {
@@ -557,6 +583,26 @@ function editLoadCascade(kabName, kecName, kelName) {
                 });
             };
             document.head.appendChild(s);
+        }
+    }, 50);
+})();
+</script>
+<script defer src="<?= BASEURL; ?>assets/plugins/datatable/js/jquery.dataTables.min.js"></script>
+<script defer src="<?= BASEURL; ?>assets/plugins/datatable/js/dataTables.bootstrap5.min.js"></script>
+<script>
+(function() {
+    var waitDt = setInterval(function() {
+        if (typeof $ !== 'undefined' && $.fn && $.fn.dataTable) {
+            clearInterval(waitDt);
+            $('#table-gereja').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.10.18/i18n/Indonesian.json'
+                },
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Semua"]],
+                order: [[0, 'asc']],
+                autoWidth: false
+            });
         }
     }, 50);
 })();

@@ -161,6 +161,32 @@ class AdminGerejaController extends Controller
         }
     }
 
+    public function editPage($id = null)
+    {
+        $model = new ModelGereja();
+        $modelFoto = new ModelGerejaFoto();
+        $modelSocial = new ModelGerejaSocialMedia();
+
+        $gereja = $model->find($id);
+        if (!$gereja) {
+            $this->redirect('admin/gereja', 'Gereja tidak ditemukan.', 'error');
+            return;
+        }
+        $gereja->foto_list = $modelFoto->getByGereja($id);
+        $gereja->social_media_list = $modelSocial->getByGereja($id);
+
+        $provinces = $model->rawQuery('SELECT id, name FROM provinces ORDER BY name');
+
+        $data = array(
+            'title' => 'Edit Gereja',
+            'gereja' => $gereja,
+            'provinces' => $provinces,
+            'filterSearch' => isset($_GET['q']) ? sanitize($_GET['q'], 'string') : '',
+            'filterProvinsi' => isset($_GET['provinsi']) ? sanitize($_GET['provinsi'], 'string') : '',
+        );
+        $this->view('admin/gereja/edit', $data);
+    }
+
     public function update($id = null)
     {
         if (CSRF_ENABLED && !verify_csrf()) {
@@ -198,7 +224,13 @@ class AdminGerejaController extends Controller
         if ($result !== false) {
             $this->saveFotos($id);
             $this->saveSocialMedia($id);
-            $this->redirect('admin/gereja', 'Gereja berhasil diperbarui.', 'success');
+            $queryParams = array();
+            $fq = isset($_POST['filter_q']) ? $_POST['filter_q'] : '';
+            $fp = isset($_POST['filter_provinsi']) ? $_POST['filter_provinsi'] : '';
+            if (!empty($fq)) $queryParams['q'] = $fq;
+            if (!empty($fp)) $queryParams['provinsi'] = $fp;
+            $queryString = !empty($queryParams) ? '?' . http_build_query($queryParams) : '';
+            $this->redirect('admin/gereja' . $queryString, 'Gereja berhasil diperbarui.', 'success');
         } else {
             $this->redirectBack('Gagal memperbarui gereja.', 'error');
         }
