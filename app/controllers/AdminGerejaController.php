@@ -128,6 +128,13 @@ class AdminGerejaController extends Controller
 
         $model = new ModelGereja();
         $namaGereja = isset($_POST['nama_gereja']) ? sanitize($_POST['nama_gereja'], 'string') : '';
+
+        $existing = $model->findByName($namaGereja);
+        if ($existing) {
+            $this->redirectBack('Data sudah ada di database.', 'error');
+            return;
+        }
+
         $slug = generateSlug($namaGereja);
         $data = array(
             'slug' => $slug,
@@ -163,6 +170,13 @@ class AdminGerejaController extends Controller
 
         $model = new ModelGereja();
         $namaGereja = isset($_POST['nama_gereja']) ? sanitize($_POST['nama_gereja'], 'string') : '';
+
+        $existing = $model->findByName($namaGereja, $id);
+        if ($existing) {
+            $this->redirectBack('Data sudah ada di database.', 'error');
+            return;
+        }
+
         $slug = generateSlug($namaGereja);
         $data = array(
             'id' => $id,
