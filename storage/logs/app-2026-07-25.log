@@ -1,0 +1,49 @@
+[2026-07-25 13:38:08] [ERROR] [Parse Error] parse error | File: unknown:0 | Context: Array
+(
+    [errno] => 4
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\views\maps\index.php
+    [line] => 330
+)
+
+[2026-07-25 13:38:15] [ERROR] [Parse Error] parse error | File: unknown:0 | Context: Array
+(
+    [errno] => 4
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\views\maps\index.php
+    [line] => 330
+)
+
+[2026-07-25 13:38:16] [ERROR] [Parse Error] parse error | File: unknown:0 | Context: Array
+(
+    [errno] => 4
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\views\maps\index.php
+    [line] => 330
+)
+
+[2026-07-25 13:38:16] [ERROR] [Parse Error] parse error | File: unknown:0 | Context: Array
+(
+    [errno] => 4
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\views\maps\index.php
+    [line] => 330
+)
+
+[2026-07-25 13:38:18] [ERROR] [Parse Error] parse error | File: unknown:0 | Context: Array
+(
+    [errno] => 4
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\views\maps\index.php
+    [line] => 330
+)
+
+[2026-07-25 13:43:18] [ERROR] [Warning] Invalid argument supplied for foreach() | File: C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\views\maps\index.php:234 | Context: Array
+(
+    [errno] => 2
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\views\maps\index.php
+    [line] => 234
+)
+
+[2026-07-25 13:43:30] [ERROR] [Warning] Invalid argument supplied for foreach() | File: C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\views\maps\index.php:234 | Context: Array
+(
+    [errno] => 2
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\views\maps\index.php
+    [line] => 234
+)
+

@@ -6,7 +6,7 @@ from selenium.webdriver.chrome.service import Service
 import openpyxl
 import os, time, re, json
 
-BASE_URL = "http://192.168.1.10/Gereja-Katolik-Indonesia"
+BASE_URL = "http://192.168.1.240/Gereja-Katolik-Indonesia"
 EMAIL = "admin.gereja.katolik.indonesia@gmail.com"
 PASSWORD = "Admin123_@"
 

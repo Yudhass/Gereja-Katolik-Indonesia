@@ -1,6 +1,6 @@
-<?php $this->view('layouts/guest_openTag', array('title' => $title, 'css' => array('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'))); ?>
+<?php $this->view('layouts/guest_openTag', array('title' => $title, 'css' => array('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css', 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css'))); ?>
 <?php
-$hasFilter = $selectedProvinsi || $selectedKabupaten || $selectedKecamatan || $selectedKelurahan || $selectedJamDari;
+$hasFilter = $selectedProvinsi || $selectedKabupaten || $selectedKecamatan || $selectedKelurahan || $selectedJamDari || $selectedNamaGereja;
 $hariUrut = array('Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu','Spesial');
 $gerejaJson = array();
 $BASEURL_JS = BASEURL;
@@ -76,6 +76,13 @@ $gerejaJsonEncoded = json_encode($gerejaJson);
     .leaflet-popup-content .popup-addr { color: #555; font-size: 0.78rem; }
     .leaflet-popup-content .popup-link { display: inline-block; margin-top: 0.3rem; background: var(--primary); color: #fff; padding: 0.2rem 0.6rem; border-radius: 50px; font-size: 0.75rem; text-decoration: none; cursor: pointer; border: none; }
     .leaflet-popup-content .popup-link:hover { background: var(--primary-dark); }
+
+    .marker-cluster-small { background-color: rgba(44,68,99,0.3); }
+    .marker-cluster-small div { background-color: #2C4463; color: #fff; font-weight: 700; }
+    .marker-cluster-medium { background-color: rgba(74,107,140,0.3); }
+    .marker-cluster-medium div { background-color: #4A6B8C; color: #fff; font-weight: 700; }
+    .marker-cluster-large { background-color: rgba(207,169,105,0.3); }
+    .marker-cluster-large div { background-color: #CFA969; color: #fff; font-weight: 700; }
 
     .filter-overlay, .sheet-overlay {
         position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1055;
@@ -190,6 +197,69 @@ $gerejaJsonEncoded = json_encode($gerejaJson);
         .sheet-panel { max-width: 440px; left: auto; right: 1rem; bottom: 1rem; border-radius: 20px; max-height: 80vh; }
         .sheet-panel.open { transform: translateY(0); }
         .sheet-handle { display: none; }
+
+        .filter-overlay { display: none !important; }
+        .btn-filter-toggle { display: none !important; }
+
+        .filter-drawer {
+            position: fixed !important;
+            top: 60px !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: auto !important;
+            width: 100% !important;
+            max-width: none !important;
+            z-index: 1001 !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
+            display: block !important;
+            transform: none !important;
+            transition: none !important;
+            border-radius: 0 !important;
+            height: auto !important;
+        }
+        .filter-drawer .filter-drawer-header { display: none !important; }
+        .filter-drawer-body {
+            padding: 0.45rem 1.2rem !important;
+            padding-bottom: 0.45rem !important;
+            overflow: visible !important;
+            flex: none !important;
+        }
+        .filter-drawer-body form {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .filter-drawer-body .mb-3 {
+            margin-bottom: 0 !important;
+            flex: 1;
+            min-width: 120px;
+        }
+        .filter-drawer-body label {
+            font-size: 0.65rem !important;
+            margin-bottom: 0.1rem !important;
+            white-space: nowrap;
+        }
+        .filter-drawer-body select,
+        .filter-drawer-body input {
+            font-size: 0.75rem !important;
+            padding: 0.25rem 0.45rem !important;
+            height: auto !important;
+        }
+        .filter-drawer-body .mt-4 { margin-top: 0 !important; }
+        .filter-drawer-body .d-flex.gap-2.mt-4 {
+            flex: 0 0 auto;
+            width: auto;
+            margin-top: 0 !important;
+        }
+        .filter-drawer-body .btn-filter,
+        .filter-drawer-body .btn-reset {
+            white-space: nowrap;
+            padding: 0.28rem 0.65rem !important;
+            font-size: 0.75rem !important;
+            height: auto !important;
+        }
+        #map { top: 120px !important; }
     }
     @media (max-width: 767px) {
         .map-header .header-left h1 { font-size: 0.85rem; }
@@ -213,7 +283,7 @@ $gerejaJsonEncoded = json_encode($gerejaJson);
         <form method="GET" action="<?= BASEURL; ?>maps">
             <div class="mb-3">
                 <label><i class="bx bx-map me-1"></i>Provinsi</label>
-                <select name="provinsi">
+                <select name="provinsi" id="filterProvinsi" onchange="loadKabupaten()">
                     <option value="">Semua Provinsi</option>
                     <?php foreach ($provinsiList as $p): ?>
                     <option value="<?= htmlspecialchars($p); ?>" <?= $selectedProvinsi == $p ? 'selected' : ''; ?>><?= htmlspecialchars($p); ?></option>
@@ -222,37 +292,32 @@ $gerejaJsonEncoded = json_encode($gerejaJson);
             </div>
             <div class="mb-3">
                 <label><i class="bx bx-building me-1"></i>Kabupaten/Kota</label>
-                <select name="kabupaten">
+                <select name="kabupaten" id="filterKabupaten" onchange="loadKecamatan()">
                     <option value="">Semua Kabupaten/Kota</option>
-                    <?php foreach ($kabupatenList as $k): ?>
-                    <option value="<?= htmlspecialchars($k); ?>" <?= $selectedKabupaten == $k ? 'selected' : ''; ?>><?= htmlspecialchars($k); ?></option>
-                    <?php endforeach; ?>
                 </select>
             </div>
             <div class="mb-3">
                 <label><i class="bx bx-detail me-1"></i>Kecamatan</label>
-                <select name="kecamatan">
+                <select name="kecamatan" id="filterKecamatan" onchange="loadKelurahan()">
                     <option value="">Semua Kecamatan</option>
-                    <?php foreach ($kecamatanList as $k): ?>
-                    <option value="<?= htmlspecialchars($k); ?>" <?= $selectedKecamatan == $k ? 'selected' : ''; ?>><?= htmlspecialchars($k); ?></option>
-                    <?php endforeach; ?>
                 </select>
             </div>
             <div class="mb-3">
                 <label><i class="bx bx-home me-1"></i>Kelurahan</label>
-                <select name="kelurahan">
+                <select name="kelurahan" id="filterKelurahan">
                     <option value="">Semua Kelurahan</option>
-                    <?php foreach ($kelurahanList as $k): ?>
-                    <option value="<?= htmlspecialchars($k); ?>" <?= $selectedKelurahan == $k ? 'selected' : ''; ?>><?= htmlspecialchars($k); ?></option>
-                    <?php endforeach; ?>
                 </select>
             </div>
             <div class="mb-3">
                 <label><i class="bx bx-time me-1"></i>Jam Mulai Misa &ge;</label>
-                <input type="time" name="jam_dari" value="<?= htmlspecialchars($selectedJamDari); ?>">
+                <input type="time" name="jam_dari" id="filterJamDari" value="<?= htmlspecialchars($selectedJamDari); ?>">
+            </div>
+            <div class="mb-3">
+                <label><i class="bx bx-search me-1"></i>Nama Gereja</label>
+                <input type="text" name="nama_gereja" id="filterNamaGereja" placeholder="Cth: gereja kemetiran" value="<?= htmlspecialchars($selectedNamaGereja); ?>">
             </div>
             <div class="d-flex gap-2 mt-4">
-                <button type="submit" class="btn btn-filter flex-fill"><i class="bx bx-filter me-1"></i>Terapkan</button>
+                <button type="button" class="btn btn-filter flex-fill" onclick="applyFilter()"><i class="bx bx-filter me-1"></i>Terapkan</button>
                 <a href="<?= BASEURL; ?>maps" class="btn-reset flex-fill"><i class="bx bx-x me-1"></i>Reset</a>
             </div>
         </form>
@@ -279,7 +344,7 @@ $gerejaJsonEncoded = json_encode($gerejaJson);
             <span><?= count($gerejaList); ?> gereja ditampilkan</span>
         </div>
     </div>
-    <button class="btn-header <?= $hasFilter ? 'active-filter' : ''; ?>" onclick="toggleFilter()">
+    <button class="btn-header btn-filter-toggle <?= $hasFilter ? 'active-filter' : ''; ?>" onclick="toggleFilter()">
         <i class="bx bx-filter-alt"></i>
         <?php if ($hasFilter): ?><i class="bx bx-check"></i><?php endif; ?>
     </button>
@@ -289,6 +354,7 @@ $gerejaJsonEncoded = json_encode($gerejaJson);
 
 <?php
 $mapScripts = '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>';
+$mapScripts .= '<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>';
 $mapScripts .= '<script>
 var BASEURL = "' . $BASEURL_JS . '";
 var HARI_URUT = ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu","Minggu","Spesial"];
@@ -316,6 +382,23 @@ L.control.layers({
 var markers = [];
 var bounds = [];
 var gerejaData = ' . $gerejaJsonEncoded . ';
+var markerClusterGroup = L.markerClusterGroup({
+    iconCreateFunction: function(cluster) {
+        var count = cluster.getChildCount();
+        var size = \'small\';
+        if (count >= 10) size = \'medium\';
+        if (count >= 100) size = \'large\';
+        var bg = \'#2C4463\';
+        if (size === \'medium\') bg = \'#4A6B8C\';
+        if (size === \'large\') bg = \'#CFA969\';
+        return L.divIcon({
+            html: \'<div style="background:\' + bg + \';color:#fff;width:44px;height:44px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);"><i class="bx bx-church" style="font-size:1.1rem;line-height:1;"></i><span style="font-size:0.65rem;font-weight:700;line-height:1;margin-top:1px;">\' + count + \'</span></div>\',
+            className: \'\',
+            iconSize: [44, 44],
+            iconAnchor: [22, 22]
+        });
+    }
+});
 
 function showGerejaDetail(idx) {
     var d = gerejaData[idx];
@@ -438,22 +521,86 @@ function escHtml(s) { if (!s) return ""; return s.replace(/&/g, "&amp;").replace
 function escAttr(s) { if (!s) return ""; return s.replace(/\"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 ';
 
-foreach ($gerejaList as $i => $g) {
-    $lat = (float)$g->latitude;
-    $lng = (float)$g->longitude;
+$mapScripts .= '
+map.addLayer(markerClusterGroup);
 
-    $mapScripts .= "
-var icon = L.divIcon({html: '<div style=\"background:#2C4463;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:1rem;\"><i class=\"bx bx-church\"></i></div>', className: '', iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -18]});
-var marker = L.marker([$lat, $lng], {icon: icon}).addTo(map);
-marker.bindPopup('<strong>' + escHtml(gerejaData[$i].nama) + '</strong><br><span class=\"popup-addr\"><i class=\"bx bx-map-pin\"></i> ' + escHtml(gerejaData[$i].alamat) + '</span><br><button class=\"popup-link\" onclick=\"showGerejaDetail($i)\"><i class=\"bx bx-detail\"></i> Detail</button>');
-markers.push(marker);
-bounds.push([$lat, $lng]);
-";
+function createGerejaMarker(data, idx) {
+    var icon = L.divIcon({
+        html: "<div style=\"background:#2C4463;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:1rem;\"><i class=\"bx bx-church\"></i></div>",
+        className: "",
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -18]
+    });
+    var marker = L.marker([data.lat, data.lng], {icon: icon});
+    marker.bindPopup(
+        "<strong>" + escHtml(data.nama) + "</strong><br>" +
+        "<span class=\"popup-addr\"><i class=\"bx bx-map-pin\"></i> " + escHtml(data.alamat) + "</span><br>" +
+        "<button class=\"popup-link\" onclick=\"showGerejaDetail(" + idx + ")\"><i class=\"bx bx-detail\"></i> Detail</button>"
+    );
+    return marker;
 }
 
-$mapScripts .= '
-if (bounds.length > 0) {
-    map.fitBounds(bounds, {padding: [30, 30], maxZoom: 14});
+function applyFilter() {
+    var p = document.getElementById("filterProvinsi").value;
+    var k = document.getElementById("filterKabupaten").value;
+    var c = document.getElementById("filterKecamatan").value;
+    var l = document.getElementById("filterKelurahan").value;
+    var n = document.getElementById("filterNamaGereja") ? document.getElementById("filterNamaGereja").value : "";
+    var j = document.getElementById("filterJamDari").value;
+
+    markerClusterGroup.clearLayers();
+    var bnds = [];
+    var cnt = 0;
+    var nLower = n.toLowerCase();
+
+    for (var i = 0; i < gerejaData.length; i++) {
+        var d = gerejaData[i];
+        if (!d.lat || !d.lng) continue;
+        if (p && d.provinsi !== p) continue;
+        if (k && d.kabkota !== k) continue;
+        if (c && d.kecamatan !== c) continue;
+        if (l && d.kelurahan !== l) continue;
+        if (n) {
+            var words = nLower.split(/\s+/);
+            var haystack = (d.nama + " " + d.alamat + " " + d.provinsi + " " + d.kabkota + " " + d.kecamatan + " " + d.kelurahan).toLowerCase();
+            var matchAll = true;
+            for (var w = 0; w < words.length; w++) {
+                if (words[w] && haystack.indexOf(words[w]) === -1) { matchAll = false; break; }
+            }
+            if (!matchAll) continue;
+        }
+        if (j) {
+            var match = false;
+            if (d.jadwal) {
+                for (var q = 0; q < d.jadwal.length; q++) {
+                    if (d.jadwal[q].waktu >= j) { match = true; break; }
+                }
+            }
+            if (!match) continue;
+        }
+        markerClusterGroup.addLayer(createGerejaMarker(d, i));
+        bnds.push([d.lat, d.lng]);
+        cnt++;
+    }
+
+    var span = document.querySelector(".map-header .header-left span");
+    if (span) span.textContent = cnt + " gereja ditampilkan";
+
+    if (bnds.length > 0) {
+        map.flyToBounds(bnds, {padding: [30, 30], maxZoom: 14, duration: 0.8});
+    }
+
+    var params = new URLSearchParams();
+    if (p) params.set("provinsi", p);
+    if (k) params.set("kabupaten", k);
+    if (c) params.set("kecamatan", c);
+    if (l) params.set("kelurahan", l);
+    if (n) params.set("nama_gereja", n);
+    if (j) params.set("jam_dari", j);
+    var qs = params.toString();
+    var newUrl = BASEURL + "maps" + (qs ? "?" + qs : "");
+    window.history.replaceState(null, "", newUrl);
 }
 
 function toggleFilter() {
@@ -463,6 +610,132 @@ function toggleFilter() {
     overlay.classList.toggle("active");
     document.body.style.overflow = drawer.classList.contains("open") ? "hidden" : "";
 }
+
+var filterProvinsi = "' . $selectedProvinsi . '";
+var filterKabupaten = "' . $selectedKabupaten . '";
+var filterKecamatan = "' . $selectedKecamatan . '";
+var filterKelurahan = "' . $selectedKelurahan . '";
+var filterNamaGereja = "' . $selectedNamaGereja . '";
+var filterJamDari = "' . $selectedJamDari . '";
+var isInit = true;
+
+function loadKabupaten() {
+    var p = document.getElementById("filterProvinsi").value;
+    var sel = document.getElementById("filterKabupaten");
+    sel.innerHTML = "<option value=\"\">Semua Kabupaten/Kota</option>";
+    document.getElementById("filterKecamatan").innerHTML = "<option value=\"\">Semua Kecamatan</option>";
+    document.getElementById("filterKelurahan").innerHTML = "<option value=\"\">Semua Kelurahan</option>";
+    if (!p) { isInit = false; applyFilter(); return; }
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", BASEURL + "maps/filter/kabupaten?provinsi=" + encodeURIComponent(p), true);
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            try {
+                var res = JSON.parse(xhr.responseText);
+                if (res.status === 200 && res.data) {
+                    for (var i = 0; i < res.data.length; i++) {
+                        var opt = document.createElement("option");
+                        opt.value = res.data[i].name;
+                        opt.textContent = res.data[i].name;
+                        if (isInit && res.data[i].name === filterKabupaten) opt.selected = true;
+                        sel.appendChild(opt);
+                    }
+                    if (isInit && filterKabupaten) { loadKecamatan(); return; }
+                }
+            } catch(e) {}
+        }
+        isInit = false;
+        applyFilter();
+    };
+    xhr.send();
+}
+
+function loadKecamatan() {
+    var p = document.getElementById("filterProvinsi").value;
+    var k = document.getElementById("filterKabupaten").value;
+    var sel = document.getElementById("filterKecamatan");
+    sel.innerHTML = "<option value=\"\">Semua Kecamatan</option>";
+    document.getElementById("filterKelurahan").innerHTML = "<option value=\"\">Semua Kelurahan</option>";
+    if (!p || !k) { isInit = false; applyFilter(); return; }
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", BASEURL + "maps/filter/kecamatan?provinsi=" + encodeURIComponent(p) + "&kabupaten=" + encodeURIComponent(k), true);
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            try {
+                var res = JSON.parse(xhr.responseText);
+                if (res.status === 200 && res.data) {
+                    for (var i = 0; i < res.data.length; i++) {
+                        var opt = document.createElement("option");
+                        opt.value = res.data[i].name;
+                        opt.textContent = res.data[i].name;
+                        if (isInit && res.data[i].name === filterKecamatan) opt.selected = true;
+                        sel.appendChild(opt);
+                    }
+                    if (isInit && filterKecamatan) { loadKelurahan(); return; }
+                }
+            } catch(e) {}
+        }
+        isInit = false;
+        applyFilter();
+    };
+    xhr.send();
+}
+
+function loadKelurahan() {
+    var p = document.getElementById("filterProvinsi").value;
+    var k = document.getElementById("filterKabupaten").value;
+    var c = document.getElementById("filterKecamatan").value;
+    var sel = document.getElementById("filterKelurahan");
+    sel.innerHTML = "<option value=\"\">Semua Kelurahan</option>";
+    if (!p || !k || !c) { isInit = false; applyFilter(); return; }
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", BASEURL + "maps/filter/kelurahan?provinsi=" + encodeURIComponent(p) + "&kabupaten=" + encodeURIComponent(k) + "&kecamatan=" + encodeURIComponent(c), true);
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            try {
+                var res = JSON.parse(xhr.responseText);
+                if (res.status === 200 && res.data) {
+                    for (var i = 0; i < res.data.length; i++) {
+                        var opt = document.createElement("option");
+                        opt.value = res.data[i].name;
+                        opt.textContent = res.data[i].name;
+                        if (isInit && res.data[i].name === filterKelurahan) opt.selected = true;
+                        sel.appendChild(opt);
+                    }
+                }
+            } catch(e) {}
+        }
+        isInit = false;
+        applyFilter();
+    };
+    xhr.send();
+}
+
+function initFilter() {
+    document.getElementById("filterProvinsi").value = filterProvinsi;
+    if (filterNamaGereja) document.getElementById("filterNamaGereja").value = filterNamaGereja;
+    if (filterJamDari) document.getElementById("filterJamDari").value = filterJamDari;
+    if (filterProvinsi) loadKabupaten(); else { isInit = false; applyFilter(); }
+
+    var namaInput = document.getElementById("filterNamaGereja");
+    if (namaInput) {
+        var timer;
+        namaInput.addEventListener("input", function() {
+            clearTimeout(timer);
+            timer = setTimeout(function() {
+                if (window.innerWidth >= 768) applyFilter();
+            }, 300);
+        });
+    }
+    var jamInput = document.getElementById("filterJamDari");
+    if (jamInput) {
+        jamInput.addEventListener("change", function() {
+            if (window.innerWidth >= 768) applyFilter();
+        });
+    }
+}
+
+initFilter();
 </script>';
 
 $this->view('layouts/guest_bottom_nav', array('activeMenu' => 'maps'));
