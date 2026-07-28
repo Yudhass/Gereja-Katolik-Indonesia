@@ -5,8 +5,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 import openpyxl
 import os, time, re, json
+import mysql.connector
 
-BASE_URL = "http://192.168.1.240/Gereja-Katolik-Indonesia"
+# BASE_URL = "http://192.168.1.240/Gereja-Katolik-Indonesia"
+BASE_URL = "http://192.168.1.4/Gereja-Katolik-Indonesia"
 EMAIL = "admin.gereja.katolik.indonesia@gmail.com"
 PASSWORD = "Admin123_@"
 
@@ -88,12 +90,12 @@ def select2_set(driver, select_id, value):
     try:
         selection = driver.find_element(By.CSS_SELECTOR, f"span[aria-labelledby='select2-{select_id}-container']")
         selection.click()
-        time.sleep(0.5)
+        time.sleep(0.1)
         try:
             search = driver.find_element(By.CSS_SELECTOR, "input.select2-search__field")
             search.clear()
             search.send_keys(found_text)
-            time.sleep(0.5)
+            time.sleep(0.1)
         except:
             pass
         option = WebDriverWait(driver, 3).until(
@@ -138,6 +140,27 @@ def get_platform(website):
     return "website"
 
 
+DB_CONFIG = {
+    "host": "localhost",
+    "user": "root",
+    "password": "",
+    "database": "db_gereja",
+    "charset": "utf8"
+}
+
+def nama_gereja_exists(nama):
+    try:
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM gereja WHERE nama_gereja = %s", (nama.strip(),))
+        count = cursor.fetchone()[0]
+        cursor.close()
+        conn.close()
+        return count > 0
+    except Exception as e:
+        print(f"  DB Error: {e}")
+        return False
+
 wdm_dir = os.path.expanduser("~/.wdm/drivers/chromedriver/win64")
 chromedriver_path = None
 if os.path.exists(wdm_dir):
@@ -165,11 +188,11 @@ wait.until(EC.presence_of_element_located((By.NAME, "email"))).send_keys(EMAIL)
 driver.find_element(By.NAME, "password").send_keys(PASSWORD)
 driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
 print("2. Login berhasil")
-time.sleep(2)
+time.sleep(0.5)
 
 driver.get(f"{BASE_URL}/admin/gereja")
 print("3. Halaman admin/gereja terbuka")
-time.sleep(2)
+time.sleep(0.5)
 
 wb = openpyxl.load_workbook(EXCEL_PATH, read_only=True, data_only=True)
 ws = wb.active
@@ -186,10 +209,14 @@ for idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=1):
 
     print(f"\n--- Data ke-{idx}: {name_val} ---")
 
+    if nama_gereja_exists(str(name_val)):
+        print(f"  [!] Sudah ada di database, skip.")
+        continue
+
     btn_tambah = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "button[data-bs-target='#modalAdd']")))
     driver.execute_script("arguments[0].click();", btn_tambah)
     print("4. Klik Tambah Gereja")
-    time.sleep(1)
+    time.sleep(0.3)
 
     wait.until(EC.presence_of_element_located((By.NAME, "nama_gereja"))).send_keys(str(name_val))
     print(f"5. Nama: {name_val}")
@@ -206,34 +233,34 @@ for idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=1):
             ok = select2_set(driver, "addProvinsi", wilayah["provinsi"])
             if ok:
                 print(f"   Provinsi: {wilayah['provinsi']}")
-                time.sleep(2)
+                time.sleep(0.5)
 
                 if wilayah["kabupaten"]:
                     try:
                         wait.until(lambda d: not d.find_element(By.ID, "addKabupaten").get_attribute("disabled"))
-                        time.sleep(1)
+                        time.sleep(0.3)
                         ok2 = select2_set(driver, "addKabupaten", wilayah["kabupaten"])
                         if ok2:
                             print(f"   Kabupaten: {wilayah['kabupaten']}")
-                            time.sleep(2)
+                            time.sleep(0.5)
 
                             if wilayah["kecamatan"]:
                                 try:
                                     wait.until(lambda d: not d.find_element(By.ID, "addKecamatan").get_attribute("disabled"))
-                                    time.sleep(1)
+                                    time.sleep(0.3)
                                     ok3 = select2_set(driver, "addKecamatan", wilayah["kecamatan"])
                                     if ok3:
                                         print(f"   Kecamatan: {wilayah['kecamatan']}")
-                                        time.sleep(2)
+                                        time.sleep(0.5)
 
                                         if wilayah["kelurahan"]:
                                             try:
                                                 wait.until(lambda d: not d.find_element(By.ID, "addKelurahan").get_attribute("disabled"))
-                                                time.sleep(1)
+                                                time.sleep(0.3)
                                                 ok4 = select2_set(driver, "addKelurahan", wilayah["kelurahan"])
                                                 if ok4:
                                                     print(f"   Kelurahan: {wilayah['kelurahan']}")
-                                                    time.sleep(1)
+                                                    time.sleep(0.3)
                                             except:
                                                 print(f"   Kelurahan tidak terpilih: {wilayah['kelurahan']}")
                                 except:
@@ -252,25 +279,25 @@ for idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=1):
         driver.execute_script("window.open(arguments[0]);", str(link_val))
         driver.switch_to.window(driver.window_handles[-1])
         print("6. Buka link maps di tab baru...")
-        time.sleep(2)
+        time.sleep(0.5)
 
         try:
             search_input = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='q']"))
             )
             search_input.click()
-            time.sleep(0.5)
+            time.sleep(0.1)
             search_input.send_keys("\n")
             print("   Klik input search lalu Enter")
-            time.sleep(3)
+            time.sleep(1)
         except:
             print("   Input search tidak ditemukan, tetap pakai URL saat ini")
-            time.sleep(2)
+            time.sleep(0.5)
 
         current_url = driver.current_url
         driver.close()
         driver.switch_to.window(original_window)
-        time.sleep(1)
+        time.sleep(0.3)
         link_input = driver.find_element(By.NAME, "link_maps")
         link_input.clear()
         link_input.send_keys(current_url)
@@ -288,7 +315,6 @@ for idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=1):
     simpan_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#modalAdd button[type='submit']")))
     driver.execute_script("arguments[0].click();", simpan_btn)
     print("7. Simpan diklik")
-    time.sleep(2)
+    time.sleep(0.5)
 
 print("\nSelesai semua data.")
-time.sleep(5)
