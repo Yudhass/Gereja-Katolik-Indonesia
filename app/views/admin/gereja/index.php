@@ -96,13 +96,17 @@ foreach ($provinces as $p) {
                         <thead>
                             <tr>
                                 <th style="width:15px;">#</th>
-                                <th style="width:25%;">Nama Gereja</th>
-                                <th style="width:25%;">Wilayah</th>
-                                <th style="width:10%;">Kontak</th>
-                                <th style="width:10%;">Foto</th>
-                                <th style="width:12%;">Sosial Media</th>
-                                <th style="width:5%;">Maps</th>
-                                <th style="width:10%;">Aksi</th>
+                                <th style="width:18%;">Nama Gereja</th>
+                                <th style="width:20%;">Alamat</th>
+                                <th>Provinsi</th>
+                                <th>Kabupaten</th>
+                                <th>Kecamatan</th>
+                                <th>Kelurahan</th>
+                                <th style="width:8%;">Kontak</th>
+                                <th style="width:6%;">Foto</th>
+                                <th style="width:8%;">Sosial Media</th>
+                                <th style="width:4%;">Maps</th>
+                                <th style="width:8%;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -110,7 +114,11 @@ foreach ($provinces as $p) {
                             <tr>
                                 <td style="width:15px;text-align:center;padding-left:2px;padding-right:2px;"><?= $no++; ?></td>
                                 <td class="fw-bold" style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->nama_gereja); ?></td>
-                                <td style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->provinsi); ?>, <?= htmlspecialchars($g->kabupaten_kota); ?><?= $g->kecamatan ? ', ' . htmlspecialchars($g->kecamatan) : ''; ?><?= $g->kelurahan ? ', ' . htmlspecialchars($g->kelurahan) : ''; ?></td>
+                                <td style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->alamat ? $g->alamat : '-'); ?></td>
+                                <td style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->provinsi ? $g->provinsi : '-'); ?></td>
+                                <td style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->kabupaten_kota ? $g->kabupaten_kota : '-'); ?></td>
+                                <td style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->kecamatan ? $g->kecamatan : '-'); ?></td>
+                                <td style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->kelurahan ? $g->kelurahan : '-'); ?></td>
                                 <td><?= htmlspecialchars($g->kontak_telepon ? $g->kontak_telepon : '-'); ?></td>
                                 <td>
                                     <?php if (!empty($g->foto_list)): ?>
@@ -601,7 +609,9 @@ function editLoadCascade(kabName, kecName, kelName) {
                 pageLength: 10,
                 lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Semua"]],
                 order: [[0, 'asc']],
-                autoWidth: false
+                autoWidth: false,
+                scrollX: true,
+                scrollCollapse: true
             });
         }
     }, 50);

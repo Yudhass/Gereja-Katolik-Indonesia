@@ -1,0 +1,16 @@
+{
+  "name": "addgereja",
+  "version": "1.0.0",
+  "description": "Script untuk membaca data gereja dari file Excel",
+  "type": "commonjs",
+  "main": "addgereja.js",
+  "scripts": {
+    "start": "node addgereja.js"
+  },
+  "dependencies": {
+    "chromedriver": "^152.0.3",
+    "mysql2": "^3.24.3",
+    "selenium-webdriver": "^4.48.0",
+    "xlsx": "^0.18.5"
+  }
+}

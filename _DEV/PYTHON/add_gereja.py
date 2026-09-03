@@ -6,23 +6,80 @@ from selenium.webdriver.chrome.service import Service
 import openpyxl
 import os, time, re, json
 import mysql.connector
+from datetime import datetime
 
-# BASE_URL = "http://192.168.1.240/Gereja-Katolik-Indonesia"
-BASE_URL = "http://192.168.1.4/Gereja-Katolik-Indonesia"
+BASE_URL = "http://192.168.1.240/Gereja-Katolik-Indonesia"
+# BASE_URL = "http://192.168.1.4/Gereja-Katolik-Indonesia"
 EMAIL = "admin.gereja.katolik.indonesia@gmail.com"
 PASSWORD = "Admin123_@"
 
 EXCEL_PATH = os.path.join(os.path.dirname(__file__), "data_matang", "Gereja-Katolik.xlsx")
+LOG_PATH = os.path.join(os.path.dirname(__file__), "log.txt")
+
+def write_log(nama_gereja, status=""):
+    if not nama_gereja:
+        return
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    line = f"{now} | {nama_gereja}"
+    if status:
+        line += f" [{status}]"
+    line += "\n"
+    with open(LOG_PATH, "a", encoding="utf-8") as f:
+        f.write(line)
+    print(f"   [LOG] {line.strip()}")
+
+def nama_gereja_in_log(nama_gereja):
+    if not nama_gereja or not os.path.exists(LOG_PATH):
+        return False
+    nama = str(nama_gereja).strip()
+    try:
+        with open(LOG_PATH, "r", encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split(" | ", 2)
+                if len(parts) >= 2 and parts[1].split(" [", 1)[0].strip().lower() == nama.lower():
+                    return True
+    except Exception as e:
+        print(f"  Error membaca log: {e}")
+    return False
 
 PROVINSI_LIST = [
-    "ACEH", "BALI", "BANTEN", "BENGKULU", "DAERAH ISTIMEWA YOGYAKARTA", "DKI JAKARTA",
-    "GORONTALO", "JAMBI", "JAWA BARAT", "JAWA TENGAH", "JAWA TIMUR", "KALIMANTAN BARAT",
-    "KALIMANTAN SELATAN", "KALIMANTAN TENGAH", "KALIMANTAN TIMUR", "KALIMANTAN UTARA",
-    "KEPULAUAN BANGKA BELITUNG", "KEPULAUAN RIAU", "LAMPUNG", "MALUKU", "MALUKU UTARA",
-    "NUSA TENGGARA BARAT", "NUSA TENGGARA TIMUR", "PAPUA", "PAPUA BARAT", "PAPUA PEGUNUNGAN",
-    "PAPUA SELATAN", "PAPUA TENGAH", "RIAU", "SULAWESI BARAT", "SULAWESI SELATAN",
-    "SULAWESI TENGAH", "SULAWESI TENGGARA", "SULAWESI UTARA", "SUMATERA BARAT",
-    "SUMATERA SELATAN", "SUMATERA UTARA"
+    "ACEH",
+        "SUMATERA UTARA",
+        "SUMATERA BARAT",
+        "RIAU",
+        "JAMBI",
+        "SUMATERA SELATAN",
+        "BENGKULU",
+        "LAMPUNG",
+        "KEPULAUAN BANGKA BELITUNG",
+        "KEPULAUAN RIAU",
+        "DKI JAKARTA",
+        "JAWA BARAT",
+        "JAWA TENGAH",
+        "DAERAH ISTIMEWA YOGYAKARTA",
+        "JAWA TIMUR",
+        "BANTEN",
+        "BALI",
+        "NUSA TENGGARA BARAT",
+        "NUSA TENGGARA TIMUR",
+        "KALIMANTAN BARAT",
+        "KALIMANTAN TENGAH",
+        "KALIMANTAN SELATAN",
+        "KALIMANTAN TIMUR",
+        "KALIMANTAN UTARA",
+        "SULAWESI UTARA",
+        "SULAWESI TENGAH",
+        "SULAWESI SELATAN",
+        "SULAWESI TENGGARA",
+        "GORONTALO",
+        "SULAWESI BARAT",
+        "MALUKU",
+        "MALUKU UTARA",
+        "PAPUA",
+        "PAPUA BARAT",
+        "PAPUA SELATAN",
+        "PAPUA TENGAH",
+        "PAPUA PEGUNUNGAN"
 ]
 
 def extract_wilayah(alamat):
@@ -209,8 +266,13 @@ for idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=1):
 
     print(f"\n--- Data ke-{idx}: {name_val} ---")
 
+    if nama_gereja_in_log(name_val):
+        print(f"  [!] Sudah ada di log, skip.")
+        continue
+
     if nama_gereja_exists(str(name_val)):
         print(f"  [!] Sudah ada di database, skip.")
+        write_log(name_val, "SUDAH ADA")
         continue
 
     btn_tambah = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "button[data-bs-target='#modalAdd']")))
@@ -316,5 +378,6 @@ for idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=1):
     driver.execute_script("arguments[0].click();", simpan_btn)
     print("7. Simpan diklik")
     time.sleep(0.5)
+    write_log(name_val, "BERHASIL DITAMBAHKAN")
 
 print("\nSelesai semua data.")
