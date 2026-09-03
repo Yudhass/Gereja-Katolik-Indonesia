@@ -444,15 +444,23 @@ async function runAutomation(opts) {
           continue;
         }
 
-      // Klik Tambah Gereja
+      // Klik Tambah Gereja - tunggu modal benar-benar visible (fix ElementNotInteractableError)
       const btnTambah = await driver.wait(until.elementLocated(By.css("button[data-bs-target='#modalAdd']")), 10000);
+      await driver.wait(until.elementIsVisible(btnTambah), 5000);
+      await driver.executeScript("arguments[0].scrollIntoView({block:'center'});", btnTambah);
       await driver.executeScript("arguments[0].click();", btnTambah);
       console.log("4. Klik Tambah Gereja");
-      await driver.sleep(400);
+      // tunggu animasi Bootstrap fade -> #modalAdd.show
+      try { await driver.wait(until.elementLocated(By.css("#modalAdd.show")), 5000); } catch {}
+      await driver.sleep(600);
 
       const namaInput = await driver.wait(until.elementLocated(By.name("nama_gereja")), 5000);
-      await namaInput.clear();
-      await namaInput.sendKeys(String(nameVal));
+      await driver.wait(until.elementIsVisible(namaInput), 5000);
+      await driver.wait(until.elementIsEnabled(namaInput), 5000);
+      await driver.executeScript("arguments[0].scrollIntoView({block:'center'});", namaInput);
+      await driver.sleep(200);
+      try { await namaInput.clear(); } catch { await driver.executeScript("arguments[0].value=''; arguments[0].dispatchEvent(new Event('input',{bubbles:true}));", namaInput); }
+      try { await namaInput.sendKeys(String(nameVal)); } catch { await driver.executeScript("arguments[0].value=arguments[1]; arguments[0].dispatchEvent(new Event('input',{bubbles:true})); arguments[0].dispatchEvent(new Event('change',{bubbles:true}));", namaInput, String(nameVal)); }
       console.log(`5. Nama: ${nameVal}`);
 
       if (addressVal) {
@@ -571,9 +579,39 @@ async function runAutomation(opts) {
       const simpanBtn = await driver.wait(until.elementLocated(By.css("#modalAdd button[type='submit']")), 5000);
       await driver.wait(until.elementIsVisible(simpanBtn), 5000);
       await driver.wait(until.elementIsEnabled(simpanBtn), 5000);
+      await driver.executeScript("arguments[0].scrollIntoView({block:'center'});", simpanBtn);
       await driver.executeScript("arguments[0].click();", simpanBtn);
       console.log(`7. Simpan diklik ${progress}`);
       await driver.sleep(900);
+      // tunggu modal tertutup & backdrop hilang sebelum loop berikutnya (fix stale/not-interactable di data berikutnya)
+      try {
+        await driver.wait(async () => {
+          const modals = await driver.findElements(By.css("#modalAdd.show"));
+          return modals.length === 0;
+        }, 5000);
+      } catch {}
+      try {
+        await driver.wait(async () => {
+          const backs = await driver.findElements(By.css(".modal-backdrop.show"));
+          return backs.length === 0;
+        }, 3000);
+      } catch {}
+      // fallback paksa tutup jika masih nyangkut
+      try {
+        const modalEl = await driver.findElement(By.id("modalAdd"));
+        if (await modalEl.isDisplayed()) {
+          await driver.executeScript(`
+            const m = document.getElementById('modalAdd');
+            if (window.bootstrap && bootstrap.Modal.getInstance(m)) bootstrap.Modal.getInstance(m).hide();
+            else if (window.jQuery) jQuery(m).modal('hide');
+            document.querySelectorAll('.modal-backdrop').forEach(e=>e.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+          `);
+          await driver.sleep(500);
+        }
+      } catch {}
       writeLog(nameVal, "BERHASIL DITAMBAHKAN");
       globalBerhasil++;
       const elapsed = ((Date.now()-startedAt)/1000).toFixed(1);
