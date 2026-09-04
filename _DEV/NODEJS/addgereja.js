@@ -4,7 +4,7 @@
  * Fitur:
  *  - baca Excel (default: _DEV/NODEJS/data_mateng/*.xlsx - data mentah per-provinsi, 37 files)
  *    fallback: _DEV/PYTHON/data_matang/Gereja-Katolik.xlsx jika data_mateng kosong
- *  - cek log.txt & DB (nama_gereja_exists) -> skip jika sudah ada
+ *  - cek log.txt & DB (nama_gereja_exists) -> skip HANYA jika ada di LOG && DB; jika salah satu tidak ada tetap input, tapi tidak tulis log ulang jika sudah ada di log
  *  - login via Selenium WebDriver + Chrome
  *  - extract wilayah dari alamat (provinsi/kabupaten/kecamatan/kelurahan)
  *  - select2 cascading (addProvinsi -> addKabupaten -> addKecamatan -> addKelurahan)
@@ -360,7 +360,8 @@ async function runAutomation(opts) {
 
   if (opts.dryRun) {
     console.log("\n[DRY-RUN] Tidak membuka browser, hanya cek skip logic.\n");
-    let skipLog=0, skipDb=0, skipEmpty=0, willProcess=0;
+    console.log("[DRY-RUN] Rule: skip HANYA jika ada di LOG && ada di DB. Jika salah satu tidak ada -> AKAN PROSES (log tidak ditulis ulang jika sudah ada di log).\n");
+    let skipBoth=0, skipEmpty=0, willProcess=0, willProcessLogExists=0, willProcessDbExists=0;
     let globalIdx=0;
     for (let sIdx=0; sIdx<sources.length; sIdx++) {
       const src = sources[sIdx];
@@ -371,18 +372,22 @@ async function runAutomation(opts) {
         const nameVal = row[1];
         const tag = `[FILE ${sIdx+1}/${sources.length} | ${src.file} | ${idx+1}/${src.rows.length} | global ${globalIdx}/${totalRows}]`;
         if (!nameVal) { skipEmpty++; console.log(`  ${tag} [SKIP EMPTY]`); continue; }
-        if (namaGerejaInLog(nameVal)) { skipLog++; console.log(`  ${tag} [SKIP LOG] ${nameVal}`); continue; }
-        if (await namaGerejaExists(String(nameVal))) { skipDb++; console.log(`  ${tag} [SKIP DB] ${nameVal}`); continue; }
+        const inLog = namaGerejaInLog(nameVal);
+        const inDb = await namaGerejaExists(String(nameVal));
+        if (inLog && inDb) { skipBoth++; console.log(`  ${tag} [SKIP LOG+DB] ${nameVal} (ada di log & DB)`); continue; }
         willProcess++;
+        if (inLog && !inDb) willProcessLogExists++;
+        if (!inLog && inDb) willProcessDbExists++;
+        const detailStatus = inLog ? "[AKAN PROSES - sudah di LOG, belum di DB -> input tapi tidak tulis log ulang]" : (!inDb ? "[AKAN PROSES - belum di LOG & belum di DB]" : "[AKAN PROSES - belum di LOG, sudah di DB -> input & akan tulis log]");
         if (willProcess<=10) {
-          console.log(`  ${tag} [AKAN PROSES] ${nameVal} | ${String(row[18]||"").slice(0,60)}`);
+          console.log(`  ${tag} ${detailStatus} ${nameVal} | ${String(row[18]||"").slice(0,60)} | inLog=${inLog} inDb=${inDb}`);
           console.log(`    wilayah=${JSON.stringify(extractWilayah(String(row[18]||"")))} platform=${getPlatform(row[7])}`);
         } else if (willProcess===11) {
           console.log(`  ... (sisa ${totalRows-globalIdx} baris tidak ditampilkan detail)`);
         }
       }
     }
-    console.log(`\n[DRY-RUN SUMMARY] files=${sources.length} totalRows=${totalRows} skipEmpty=${skipEmpty} skipLog=${skipLog} skipDb=${skipDb} willProcess=${willProcess}`);
+    console.log(`\n[DRY-RUN SUMMARY] files=${sources.length} totalRows=${totalRows} skipEmpty=${skipEmpty} skipBoth(LOG+DB)=${skipBoth} willProcess=${willProcess} (dari willProcess: sudahDiLog=${willProcessLogExists}, sudahDiDb=${willProcessDbExists})`);
     console.table(sources.map((s,i)=>({ "#": i+1, file: s.file, rows: s.rows.length, sizeKB: s.sizeKB })));
     return;
   }
@@ -415,8 +420,7 @@ async function runAutomation(opts) {
     // iter per-file agar jelas sedang proses file mana (mirror Python tapi dengan indikator file)
     let globalIdx = 0;
     let globalBerhasil = 0;
-    let globalSkipLog = 0;
-    let globalSkipDb = 0;
+    let globalSkipBoth = 0;
     const startedAt = Date.now();
     for (let sIdx=0; sIdx<sources.length; sIdx++) {
       const src = sources[sIdx];
@@ -436,12 +440,20 @@ async function runAutomation(opts) {
         const progress = `[FILE ${sIdx+1}/${sources.length} ${src.file} | ${idx+1}/${src.rows.length} | GLOBAL ${globalIdx}/${totalRows}]`;
         console.log(`\n${progress} --- Data ke-${globalIdx}: ${nameVal} ---`);
 
-        if (namaGerejaInLog(nameVal)) { console.log(`  ${progress} [!] Sudah ada di log, skip.`); globalSkipLog++; continue; }
-        if (await namaGerejaExists(String(nameVal))) {
-          console.log(`  ${progress} [!] Sudah ada di database, skip.`);
-          writeLog(nameVal, "SUDAH ADA");
-          globalSkipDb++;
+        // Rule baru: skip HANYA jika ada di LOG && ada di DB
+        const inLog = namaGerejaInLog(nameVal);
+        const inDb = await namaGerejaExists(String(nameVal));
+        if (inLog && inDb) {
+          console.log(`  ${progress} [!] Sudah ada di LOG & DB, skip. inLog=${inLog} inDb=${inDb}`);
+          globalSkipBoth++;
           continue;
+        }
+        if (inLog && !inDb) {
+          console.log(`  ${progress} [i] Ada di LOG tapi BELUM di DB -> tetap input (tidak tulis log ulang). inLog=${inLog} inDb=${inDb}`);
+        } else if (!inLog && inDb) {
+          console.log(`  ${progress} [i] Belum di LOG tapi sudah di DB -> tetap input & nanti tulis log. inLog=${inLog} inDb=${inDb}`);
+        } else {
+          console.log(`  ${progress} [i] Belum di LOG & belum di DB -> input baru. inLog=${inLog} inDb=${inDb}`);
         }
 
       // Klik Tambah Gereja - tunggu modal benar-benar visible (fix ElementNotInteractableError)
@@ -612,7 +624,12 @@ async function runAutomation(opts) {
           await driver.sleep(500);
         }
       } catch {}
-      writeLog(nameVal, "BERHASIL DITAMBAHKAN");
+      // Jangan tulis log ulang jika sudah ada di log
+      if (!inLog) {
+        writeLog(nameVal, "BERHASIL DITAMBAHKAN");
+      } else {
+        console.log(`   [LOG] Sudah ada di log, tidak tulis ulang: ${nameVal}`);
+      }
       globalBerhasil++;
       const elapsed = ((Date.now()-startedAt)/1000).toFixed(1);
       console.log(`   [PROGRESS] ${progress} => BERHASIL | total berhasil: ${globalBerhasil} | elapsed: ${elapsed}s`);
@@ -620,7 +637,7 @@ async function runAutomation(opts) {
       console.log(`\n[FILE SELESAI] ${src.file} (${sIdx+1}/${sources.length}) - berhasil di file ini: ${globalBerhasil} (kumulatif)`);
     } // end sources loop
 
-    console.log(`\n[Selesai semua data] files=${sources.length} totalRows=${totalRows} berhasil=${globalBerhasil} skipLog=${globalSkipLog} skipDb=${globalSkipDb} elapsed=${((Date.now()-startedAt)/1000).toFixed(1)}s`);
+    console.log(`\n[Selesai semua data] files=${sources.length} totalRows=${totalRows} berhasil=${globalBerhasil} skipBoth(LOG+DB)=${globalSkipBoth} elapsed=${((Date.now()-startedAt)/1000).toFixed(1)}s`);
     console.table(sources.map((s,i)=>({ "#": i+1, file: s.file, rows: s.rows.length, sizeKB: s.sizeKB })) );
   } finally {
     console.log("\n[INFO] Menutup browser dalam 3 detik...");
