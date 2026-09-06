@@ -456,8 +456,18 @@ async function runAutomation(opts) {
           console.log(`  ${progress} [i] Belum di LOG & belum di DB -> input baru. inLog=${inLog} inDb=${inDb}`);
         }
 
-      // Klik Tambah Gereja - tunggu modal benar-benar visible (fix ElementNotInteractableError)
-      const btnTambah = await driver.wait(until.elementLocated(By.css("button[data-bs-target='#modalAdd']")), 10000);
+      // Klik Tambah Gereja - pastikan halaman stabil & tombol ada
+      // navigasi ulang jika tombol tidak ditemukan (halaman mungkin refresh/redirect setelah submit)
+      const btnTambah = await driver.wait(
+        until.elementLocated(By.css("button[data-bs-target='#modalAdd']")),
+        8000,
+        "Tombol 'Tambah Gereja' tidak ditemukan - halaman mungkin belum siap",
+      ).catch(async () => {
+        console.log("   [RECOVER] Tombol tidak ditemukan, navigasi ulang ke admin/gereja...");
+        await driver.get(`${BASE_URL}/admin/gereja`);
+        await driver.sleep(1000);
+        return await driver.wait(until.elementLocated(By.css("button[data-bs-target='#modalAdd']")), 10000);
+      });
       await driver.wait(until.elementIsVisible(btnTambah), 5000);
       await driver.executeScript("arguments[0].scrollIntoView({block:'center'});", btnTambah);
       await driver.executeScript("arguments[0].click();", btnTambah);
