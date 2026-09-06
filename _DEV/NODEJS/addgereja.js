@@ -41,6 +41,39 @@ const PASSWORD = process.env.GEREJA_PASSWORD || "Admin123_@";
 
 const LOG_PATH = path.join(__dirname, "log.txt");
 
+// ---------------------------------------------------------------------------
+// Terminal Styling - informatif & mudah dibaca (support Windows CMD/PowerShell)
+// ---------------------------------------------------------------------------
+const _isWin = process.platform === 'win32';
+const _hasColor = !_isWin || !!process.env.FORCE_COLOR || !!process.env.WT_SESSION || !!process.env.ConEmuANSI || (process.env.TERM && process.env.TERM !== 'dumb');
+const C = _hasColor ? {
+  reset: "\x1b[0m", bold: "\x1b[1m", dim: "\x1b[2m", italic: "\x1b[3m",
+  red: "\x1b[31m", green: "\x1b[32m", yellow: "\x1b[33m", blue: "\x1b[34m", magenta: "\x1b[35m", cyan: "\x1b[36m", white: "\x1b[37m", gray: "\x1b[90m",
+  bgRed: "\x1b[41m", bgGreen: "\x1b[42m", bgYellow: "\x1b[43m", bgBlue: "\x1b[44m",
+} : { reset:"", bold:"", dim:"", italic:"", red:"", green:"", yellow:"", blue:"", magenta:"", cyan:"", white:"", gray:"", bgRed:"", bgGreen:"", bgYellow:"", bgBlue:"" };
+const S = {
+  ok: C.green + "✔" + C.reset, fail: C.red + "✘" + C.reset, warn: C.yellow + "⚠" + C.reset,
+  skip: C.gray + "↷" + C.reset, info: C.cyan + "ℹ" + C.reset, arrow: C.gray + "→" + C.reset,
+  dot: C.gray + "·" + C.reset, star: C.yellow + "★" + C.reset,
+};
+function col(t,c){ return c + t + C.reset; }
+function badge(text, color){ return color + C.bold + ` ${text} ` + C.reset; }
+function bar(cur, total, width=24){
+  const pct = total? cur/total : 0;
+  const filled = Math.round(width*pct);
+  const empty = width-filled;
+  const p = (pct*100).toFixed(1).padStart(5);
+  return col("█".repeat(filled), C.cyan) + col("░".repeat(empty), C.gray) + ` ${col(p+"%", C.bold)} ${col(`(${cur}/${total})`, C.dim)}`;
+}
+function hr(char="─", len=72){ return col(char.repeat(len), C.gray); }
+function boxTitle(title){
+  const w=72; const pad = Math.max(0, w - 2 - title.length);
+  const l = Math.floor(pad/2), r = pad - l;
+  return `\n${col("╔"+"═".repeat(w-2)+"╗", C.cyan)}\n${col("║",C.cyan)}${" ".repeat(l)}${col(C.bold+title, C.white)}${" ".repeat(r)}${col("║",C.cyan)}\n${col("╚"+"═".repeat(w-2)+"╝", C.cyan)}`;
+}
+function fmtTime(s){ const m=Math.floor(s/60), sec=(s%60).toFixed(1); return m? `${m}m ${sec}s` : `${sec}s`; }
+function truncate(s, n){ s=String(s||""); return s.length>n ? s.slice(0,n-1)+"…" : s; }
+
 // Excel path - prioritas: _DEV/NODEJS/data_mateng (data mentah) dulu, baru fallback ke data matang
 function resolveExcelSources(custom) {
   if (custom) {
@@ -194,16 +227,133 @@ function getPlatform(website) {
   return "website";
 }
 
-async function namaGerejaExists(nama) {
+async function loadAllNamaGerejaFromDB() {
   let conn;
   try {
     conn = await mysql.createConnection(DB_CONFIG);
-    const [rows] = await conn.execute("SELECT COUNT(*) as cnt FROM gereja WHERE nama_gereja = ?", [String(nama).trim()]);
-    return rows[0].cnt > 0;
+    const [rows] = await conn.execute("SELECT nama_gereja FROM gereja");
+    const set = new Set();
+    for (const r of rows) set.add(String(r.nama_gereja).trim().toLowerCase());
+    console.log(`[CACHE] Loaded ${set.size} nama_gereja dari DB`);
+    return set;
   } catch (e) {
-    console.log(`  DB Error: ${e.message}`);
-    return false;
+    console.log(`  [CACHE DB] Error: ${e.message}`);
+    return new Set();
   } finally { if (conn) await conn.end(); }
+}
+
+function namaGerejaExistsCached(cacheSet, nama) {
+  return cacheSet.has(String(nama).trim().toLowerCase());
+}
+
+async function buildCookieHeader(driver) {
+  try {
+    const cookies = await driver.manage().getCookies();
+    return cookies.map(c => `${c.name}=${c.value}`).join('; ');
+  } catch (_) { return ''; }
+}
+
+async function loadExistsViaAPI(driver, allNames) {
+  // Batch API: POST /admin/gereja/check-batch {names:[...]} -> {data:{ "Nama": true/false }}
+  // Cepat: 1 HTTP request untuk 10k+ names vs 10k query / 10k UI filter
+  // Endpoint GET single juga tersedia: GET /admin/gereja/check?nama=...
+  try {
+    const cookie = await buildCookieHeader(driver);
+    if (!cookie) throw new Error('No cookies');
+    // chunk jika terlalu besar (batas body)
+    const chunkSize = 2000;
+    const existsSet = new Set();
+    const totalChunks = Math.ceil(allNames.length / chunkSize);
+    for (let i = 0; i < allNames.length; i += chunkSize) {
+      const idx = Math.floor(i/chunkSize)+1;
+      const chunk = allNames.slice(i, i + chunkSize);
+      const endpoint = `${BASE_URL}/admin/gereja/check-batch`;
+      console.log(`[API] POST ${endpoint} [chunk ${idx}/${totalChunks}] ${chunk.length} names...`);
+      const t0 = Date.now();
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Cookie': cookie },
+        body: JSON.stringify({ names: chunk })
+      });
+      const elapsed = Date.now()-t0;
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${await res.text().then(t=>t.slice(0,200))}`);
+      const json = await res.json();
+      const map = json.data || {};
+      let foundInChunk = 0;
+      for (const [k, v] of Object.entries(map)) if (v) { existsSet.add(String(k).trim().toLowerCase()); foundInChunk++; }
+      console.log(`[API] <- ${res.status} chunk ${idx}/${totalChunks} ${foundInChunk}/${chunk.length} sudah ada (${elapsed}ms)`);
+    }
+    console.log(`[API] Batch check selesai: ${existsSet.size}/${allNames.length} sudah ada (via POST /admin/gereja/check-batch)`);
+    // Contoh GET single juga tersedia: GET /admin/gereja/check?nama=Gereja%20A -> {"data":{"exists":true}}
+    if (allNames.length>0) console.log(`[API] Contoh GET single: GET ${BASE_URL}/admin/gereja/check?nama=${encodeURIComponent(allNames[0].slice(0,40))} -> pakai batch cache`);
+    return existsSet;
+  } catch (e) {
+    console.log(`[API] Gagal batch check: ${e.message} -> fallback DB`);
+    return null;
+  }
+}
+
+async function checkSingleViaAPI(driver, nama) {
+  try {
+    const cookie = await buildCookieHeader(driver);
+    const url = `${BASE_URL}/admin/gereja/check?nama=${encodeURIComponent(String(nama).trim())}`;
+    const res = await fetch(url, { headers: { 'Cookie': cookie, 'Accept': 'application/json' } });
+    const text = await res.text();
+    if (!res.ok) {
+      console.log(`  [API GET] HTTP ${res.status} body=${text.slice(0,200)}`);
+      return null;
+    }
+    let json;
+    try { json = JSON.parse(text); } catch (e) {
+      console.log(`  [API GET] JSON parse fail body=${text.slice(0,300)}`);
+      return null;
+    }
+    return !!(json.data && json.data.exists);
+  } catch (e) { console.log(`  [API GET] fetch error ${e.message}`); return null; }
+}
+
+async function ensureOnGerejaPage(driver) {
+  try {
+    const url = await driver.getCurrentUrl();
+    if (!url.includes("/admin/gereja")) {
+      console.log("   [Recovery] Halaman berubah, kembali ke /admin/gereja...");
+      await driver.get(`${BASE_URL}/admin/gereja`);
+      await driver.sleep(800);
+    }
+    // Pastikan modal tertutup
+    const backdrops = await driver.findElements(By.css(".modal-backdrop"));
+    if (backdrops.length > 0) {
+      console.log("   [Recovery] Menutup backdrop yang tersisa...");
+      await driver.executeScript(`
+        document.querySelectorAll('.modal-backdrop').forEach(e=>e.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        const m = document.getElementById('modalAdd');
+        if (m) { m.classList.remove('show'); m.style.display='none'; }
+      `);
+      await driver.sleep(300);
+    }
+    const modal = await driver.findElements(By.css("#modalAdd.show"));
+    if (modal.length > 0) {
+      console.log("   [Recovery] Menutup modal yang tersisa...");
+      await driver.executeScript(`
+        const m = document.getElementById('modalAdd');
+        if (window.bootstrap && bootstrap.Modal.getInstance(m)) bootstrap.Modal.getInstance(m).hide();
+        else if (window.jQuery) jQuery(m).modal('hide');
+        else { m.classList.remove('show'); m.style.display='none'; }
+        document.querySelectorAll('.modal-backdrop').forEach(e=>e.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+      `);
+      await driver.sleep(300);
+    }
+    return true;
+  } catch (e) {
+    console.log(`   [Recovery] Error: ${e.message}. Memaksa navigasi ulang...`);
+    await driver.get(`${BASE_URL}/admin/gereja`);
+    await driver.sleep(1000);
+    return true;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -305,41 +455,33 @@ function loadExcelSources(custom) {
 }
 
 function previewExcel(excelPath, limit=5) {
-  // jika excelPath null -> pakai semua sources agar jelas file mana
   const sources = excelPath ? [loadExcelRows(excelPath)].map(r=>({ file: path.basename(r.path), path: r.path, header: r.header, rows: r.rows, sizeKB: "?" })) : loadExcelSources(null);
-  // fallback: kalau loadExcelRows single, pakai loadExcelSources untuk konsistensi file indicator
   const actualSources = excelPath ? loadExcelSources(excelPath) : sources;
-
-  console.log("\n╔════════════════════════════════════════════════════════════╗");
-  console.log("║  ADDGEREJA - Preview Excel (mode --preview)                ║");
-  console.log("╚════════════════════════════════════════════════════════════╝");
-  console.log(`\n[INFO] Ditemukan ${actualSources.length} file .xlsx`);
+  console.log(boxTitle("ADDGEREJA — Preview Excel  (mode --preview)"));
+  console.log(`\n${S.info} ${col(`Ditemukan ${actualSources.length} file .xlsx`, C.bold)}  ${col(`limit ${limit}/file`, C.dim)}`);
   let grandTotal = 0;
   for (let sIdx=0; sIdx<actualSources.length; sIdx++) {
     const s = actualSources[sIdx];
     grandTotal += s.rows.length;
-    console.log(`\n┌─ [FILE ${sIdx+1}/${actualSources.length}] ${s.file} (${s.sizeKB} KB) | Sheet: ${s.sheetName} | ${s.rows.length} rows | ${s.header.length} cols`);
-    console.log(`│  Path  : ${s.path}`);
-    console.log(`│  Header: ${s.header.join(" | ")}`);
-    const preview = s.rows.slice(0, limit).map(r=>{
-      const obj={};
-      s.header.forEach((h,i)=> obj[h]=r[i]);
-      return obj;
-    });
-    console.log(`│  Preview ${Math.min(limit, s.rows.length)} baris pertama:`);
+    console.log(`\n${col("┌─",C.cyan)} ${badge(`FILE ${sIdx+1}/${actualSources.length}`, C.bgBlue+C.white)} ${col(s.file, C.bold+C.white)} ${col(`(${s.sizeKB} KB)`,C.dim)} ${col(`Sheet: ${s.sheetName}`,C.gray)} ${col(`${s.rows.length} rows × ${s.header.length} cols`, C.cyan)}`);
+    console.log(`${col("│",C.cyan)}  ${col("Path",C.dim)}  ${S.arrow} ${col(s.path, C.gray)}`);
+    console.log(`${col("│",C.cyan)}  ${col("Header",C.dim)} ${S.arrow} ${col(truncate(s.header.join(" | "), 110), C.white)}`);
+    const preview = s.rows.slice(0, limit).map(r=>{ const obj={}; s.header.forEach((h,i)=> obj[h]=r[i]); return obj; });
+    console.log(`${col("│",C.cyan)}  ${col(`Preview ${Math.min(limit,s.rows.length)} baris:`, C.yellow)}`);
     console.table(preview);
-    if (s.rows.length > limit) console.log(`│  ... ${s.rows.length-limit} baris lagi tidak ditampilkan (total ${s.rows.length})`);
-    console.log(`│  Kolom penting: name=1, website=7, phone=8, address=18, link=20`);
+    if (s.rows.length > limit) console.log(`${col("│",C.cyan)}  ${col(`… ${s.rows.length-limit} baris lagi (total ${s.rows.length})`, C.dim)}`);
+    console.log(`${col("│",C.cyan)}  ${col("Kolom penting:",C.dim)} ${col("name=1",C.green)} ${S.dot} ${col("website=7",C.cyan)} ${S.dot} ${col("phone=8",C.yellow)} ${S.dot} ${col("address=18",C.magenta)} ${S.dot} ${col("link=20",C.blue)}`);
     preview.forEach((obj,i)=>{
       const r = s.rows[i];
-      console.log(`│   #${i+1} name=${r[1]} | alamat=${String(r[18]||"").slice(0,50)} | phone=${r[8]}`);
+      const name = r[1] ? col(truncate(r[1],48), C.bold+C.white) : col("(empty)",C.red);
+      console.log(`${col("│",C.cyan)}   ${col(`#${i+1}`,C.dim)} ${name} ${S.arrow} ${col(truncate(String(r[18]||"-"),42),C.gray)} ${S.dot} ${col(String(r[8]||"-"),C.yellow)}`);
     });
-    console.log(`└${"─".repeat(70)}`);
+    console.log(col("└"+("─".repeat(70)), C.cyan));
   }
-  console.log(`\n[SUMMARY] ${actualSources.length} file | Total rows: ${grandTotal}`);
+  console.log(`\n${col("▶ SUMMARY",C.bold+C.cyan)}  ${col(`${actualSources.length} file`,C.bold)} ${S.dot} ${col(`Total rows: ${grandTotal}`, C.bold+C.green)}  ${bar(grandTotal, grandTotal)}`);
   if (actualSources.length>1) {
-    console.log("\nRingkasan per-file:");
-    console.table(actualSources.map((s,i)=>({ "#": i+1, file: s.file, rows: s.rows.length, sizeKB: s.sizeKB })));
+    console.log(`\n${col("Ringkasan per-file:", C.bold)}`);
+    console.table(actualSources.map((s,i)=>({ "#": i+1, file: col(s.file,C.cyan), rows: col(String(s.rows.length),C.bold), sizeKB: s.sizeKB })));
   }
 }
 
@@ -350,45 +492,58 @@ async function runAutomation(opts) {
   const sources = loadExcelSources(opts.excel);
   const totalRows = sources.reduce((a,s)=>a+s.rows.length, 0);
   const header = sources[0]?.header || [];
-  console.log(`\n[INFO] Ditemukan ${sources.length} file Excel`);
-  sources.forEach((s,i)=> console.log(`  [${i+1}/${sources.length}] ${s.file} (${s.sizeKB} KB) - ${s.rows.length} rows - ${s.path}`));
-  console.log(`[INFO] BASE_URL: ${BASE_URL}`);
-  console.log(`[INFO] LOG_PATH: ${LOG_PATH}`);
-  console.log(`[INFO] DB: ${DB_CONFIG.host}/${DB_CONFIG.database}`);
-  console.log(`[INFO] Header: ${header.slice(0,6).join(", ")} ... (${header.length} cols)`);
-  console.log(`[INFO] Total rows: ${totalRows} (gabungan ${sources.length} file)`);
+  console.log(boxTitle("ADDGEREJA  —  Automation"));
+  console.log(`${S.info} ${col(`Ditemukan ${sources.length} file Excel`,C.bold)}  ${bar(sources.length, sources.length)}`);
+  sources.forEach((s,i)=>{
+    const idx = col(`[${String(i+1).padStart(2)}/${sources.length}]`, C.dim);
+    console.log(`  ${idx} ${col(s.file, C.cyan+C.bold)} ${col(`(${s.sizeKB} KB`,C.dim)} ${S.dot} ${col(`${s.rows.length} rows`, C.yellow)}${col(")",C.dim)} ${col("→",C.gray)} ${col(s.path, C.gray)}`);
+  });
+  console.log(`\n  ${col("BASE_URL",C.dim)} ${S.arrow} ${col(BASE_URL, C.cyan)}`);
+  console.log(`  ${col("LOG_PATH",C.dim)} ${S.arrow} ${col(LOG_PATH, C.gray)}`);
+  console.log(`  ${col("DB",C.dim)}       ${S.arrow} ${col(`${DB_CONFIG.host}/${DB_CONFIG.database}`, C.yellow)}  ${S.dot} ${col(`Header: ${header.slice(0,6).join(", ")} … (${header.length} cols)`, C.dim)}`);
+  console.log(`  ${col("TOTAL",C.dim)}    ${S.arrow} ${col(String(totalRows), C.bold+C.green)} rows ${bar(0,totalRows)}`);
 
+  // DB cache untuk dry-run (tanpa login API tidak tersedia)
+  let dbCacheSet = null;
   if (opts.dryRun) {
-    console.log("\n[DRY-RUN] Tidak membuka browser, hanya cek skip logic.\n");
-    console.log("[DRY-RUN] Rule: skip HANYA jika ada di LOG && ada di DB. Jika salah satu tidak ada -> AKAN PROSES (log tidak ditulis ulang jika sudah ada di log).\n");
+    console.log(`\n${col("▶ Meng-cache nama_gereja dari DB (dry-run)...", C.yellow)}`);
+    dbCacheSet = await loadAllNamaGerejaFromDB();
+    console.log(boxTitle("DRY-RUN  —  Cek Skip Logic (tanpa browser)"));
+    console.log(`${col("Rule:",C.bold)} skip ${badge("HANYA",C.bgGreen)} jika ${col("LOG",C.cyan)} ${S.dot} ${col("DB",C.yellow)} ada keduanya`);
+    console.log(`${col("Jika salah satu tidak ada → AKAN PROSES",C.dim)} (log tidak ditulis ulang jika sudah ada)\n`);
     let skipBoth=0, skipEmpty=0, willProcess=0, willProcessLogExists=0, willProcessDbExists=0;
     let globalIdx=0;
     for (let sIdx=0; sIdx<sources.length; sIdx++) {
       const src = sources[sIdx];
-      console.log(`\n[FILE ${sIdx+1}/${sources.length}] ${src.file} - ${src.rows.length} rows`);
+      console.log(`\n${col("┌─",C.cyan)} ${badge(`FILE ${sIdx+1}/${sources.length}`, C.bgBlue)} ${col(src.file, C.bold)} ${col(`(${src.rows.length} rows)`,C.dim)} ${bar(0, src.rows.length)}`);
       for (let idx=0; idx<src.rows.length; idx++) {
         globalIdx++;
         const row = src.rows[idx];
         const nameVal = row[1];
-        const tag = `[FILE ${sIdx+1}/${sources.length} | ${src.file} | ${idx+1}/${src.rows.length} | global ${globalIdx}/${totalRows}]`;
-        if (!nameVal) { skipEmpty++; console.log(`  ${tag} [SKIP EMPTY]`); continue; }
+        const tag = `${col(`[F${sIdx+1} ${src.file}`,C.dim)} ${col(`${idx+1}/${src.rows.length}`,C.cyan)} ${col(`G${globalIdx}/${totalRows}`,C.yellow)}${col("]",C.dim)}`;
+        if (!nameVal) { skipEmpty++; console.log(`  ${tag} ${badge("SKIP EMPTY", C.bgYellow)}`); continue; }
         const inLog = namaGerejaInLog(nameVal);
-        const inDb = await namaGerejaExists(String(nameVal));
-        if (inLog && inDb) { skipBoth++; console.log(`  ${tag} [SKIP LOG+DB] ${nameVal} (ada di log & DB)`); continue; }
+        const inDb = namaGerejaExistsCached(dbCacheSet, String(nameVal));
+        const checkIcon = inDb ? col("● SUDAH ADA", C.green) : col("○ BELUM ADA", C.yellow);
+        console.log(`  ${tag} ${S.arrow} ${col(truncate(nameVal,52), C.white)} ${S.dot} ${checkIcon} ${S.dot} inLog=${inLog?col("ya",C.green):col("tidak",C.dim)} ${col("(dry-run DB)",C.dim)}`);
+        if (inLog && inDb) { skipBoth++; console.log(`  ${" ".repeat(6)}${S.skip} ${col(`SKIP LOG+DB`,C.gray)} ${col(nameVal, C.dim)}`); continue; }
         willProcess++;
         if (inLog && !inDb) willProcessLogExists++;
         if (!inLog && inDb) willProcessDbExists++;
         const detailStatus = inLog ? "[AKAN PROSES - sudah di LOG, belum di DB -> input tapi tidak tulis log ulang]" : (!inDb ? "[AKAN PROSES - belum di LOG & belum di DB]" : "[AKAN PROSES - belum di LOG, sudah di DB -> input & akan tulis log]");
         if (willProcess<=10) {
-          console.log(`  ${tag} ${detailStatus} ${nameVal} | ${String(row[18]||"").slice(0,60)} | inLog=${inLog} inDb=${inDb}`);
-          console.log(`    wilayah=${JSON.stringify(extractWilayah(String(row[18]||"")))} platform=${getPlatform(row[7])}`);
+          const w = extractWilayah(String(row[18]||""));
+          console.log(`  ${tag} ${col(detailStatus, inDb?C.yellow:C.green)} ${col(truncate(nameVal,44),C.white)}`);
+          console.log(`       ${S.dot} ${col("alamat",C.dim)} ${truncate(String(row[18]||"-"),46)} ${S.dot} ${col("wilayah",C.dim)} ${col(JSON.stringify(w),C.cyan)} ${S.dot} ${col("platform",C.dim)} ${col(getPlatform(row[7]),C.magenta)}`);
         } else if (willProcess===11) {
-          console.log(`  ... (sisa ${totalRows-globalIdx} baris tidak ditampilkan detail)`);
+          console.log(`  ${col(`… ${totalRows-globalIdx} baris lagi tidak ditampilkan`, C.dim)}`);
         }
       }
     }
-    console.log(`\n[DRY-RUN SUMMARY] files=${sources.length} totalRows=${totalRows} skipEmpty=${skipEmpty} skipBoth(LOG+DB)=${skipBoth} willProcess=${willProcess} (dari willProcess: sudahDiLog=${willProcessLogExists}, sudahDiDb=${willProcessDbExists})`);
-    console.table(sources.map((s,i)=>({ "#": i+1, file: s.file, rows: s.rows.length, sizeKB: s.sizeKB })));
+    console.log(boxTitle("DRY-RUN SUMMARY"));
+    console.log(`${col("Files",C.dim)} ${S.arrow} ${sources.length}  ${S.dot} ${col("Total",C.dim)} ${totalRows}  ${S.dot} ${badge(`SKIP EMPTY ${skipEmpty}`,C.bgYellow)} ${badge(`SKIP LOG+DB ${skipBoth}`,C.bgGreen)} ${badge(`AKAN PROSES ${willProcess}`,C.bgBlue)}`);
+    console.log(`${col(`dari AKAN PROSES: sudahDiLog=${willProcessLogExists} sudahDiDb=${willProcessDbExists}`, C.dim)}`);
+    console.table(sources.map((s,i)=>({ "#": i+1, file: col(s.file,C.cyan), rows: col(String(s.rows.length),C.bold), sizeKB: s.sizeKB })));
     return;
   }
 
@@ -404,29 +559,34 @@ async function runAutomation(opts) {
     await driver.manage().window().maximize();
     const wait = { until: until, timeout: 10000 };
 
-    console.log("\n1. Buka halaman login");
+    console.log(`\n${col("▶",C.cyan)} ${col("1. Buka halaman login",C.bold)}  ${col(BASE_URL+"/login",C.dim)}`);
     await driver.get(`${BASE_URL}/login`);
     await driver.wait(until.elementLocated(By.name("email")), 10000);
     await driver.findElement(By.name("email")).sendKeys(EMAIL);
     await driver.findElement(By.name("password")).sendKeys(PASSWORD);
     await driver.findElement(By.css("button[type='submit']")).click();
-    console.log("2. Login berhasil");
+    console.log(`  ${S.ok} ${col("Login berhasil", C.green+C.bold)} ${col(`(${EMAIL})`,C.dim)}`);
     await driver.sleep(800);
 
-    console.log("3. Buka admin/gereja");
+    console.log(`\n${col("▶",C.cyan)} ${col("2. Buka admin/gereja",C.bold)}  ${col(BASE_URL+"/admin/gereja",C.dim)}`);
     await driver.get(`${BASE_URL}/admin/gereja`);
     await driver.sleep(800);
 
-    // iter per-file agar jelas sedang proses file mana (mirror Python tapi dengan indikator file)
+    const apiCache = new Map();
+    let dbCacheSet = new Set();
+    console.log(`\n${S.info} ${col("Mode per-item API GET",C.bold+C.cyan)} ${col(`${BASE_URL}/admin/gereja/check?nama=...`,C.dim)} ${badge("identik add()",C.bgGreen)}`);
+
     let globalIdx = 0;
     let globalBerhasil = 0;
     let globalSkipBoth = 0;
+    let globalGagal = 0;
     const startedAt = Date.now();
     for (let sIdx=0; sIdx<sources.length; sIdx++) {
       const src = sources[sIdx];
-      console.log(`\n════════════════════════════════════════════════════════════`);
-      console.log(`[FILE ${sIdx+1}/${sources.length}] ${src.file} | ${src.rows.length} rows | ${src.path}`);
-      console.log(`════════════════════════════════════════════════════════════`);
+      const pctFile = ((sIdx+1)/sources.length*100).toFixed(0);
+      console.log(`\n${col("┏━",C.cyan)} ${badge(`FILE ${sIdx+1}/${sources.length}`, C.bgBlue)} ${col(src.file, C.bold+C.white)} ${col(`${src.rows.length} rows`,C.yellow)} ${col(`(${src.sizeKB} KB)`,C.dim)} ${col(pctFile+"%",C.bold)}`);
+      console.log(`${col("┃",C.cyan)}  ${col(src.path, C.gray)}`);
+      console.log(`${col("┗━",C.cyan)} ${hr("━",68)}`);
       for (let idx=0; idx<src.rows.length; idx++) {
         globalIdx++;
         const row = src.rows[idx];
@@ -437,34 +597,61 @@ async function runAutomation(opts) {
         const websiteVal = row.length > 7 ? row[7] : null;
 
         if (!nameVal) continue;
-        const progress = `[FILE ${sIdx+1}/${sources.length} ${src.file} | ${idx+1}/${src.rows.length} | GLOBAL ${globalIdx}/${totalRows}]`;
-        console.log(`\n${progress} --- Data ke-${globalIdx}: ${nameVal} ---`);
+        const progLabel = col(`[F${sIdx+1}/${sources.length} ${String(idx+1).padStart(2)}/${src.rows.length}  G${globalIdx}/${totalRows}]`, C.dim);
+        const gPct = ((globalIdx/totalRows)*100).toFixed(1);
+        console.log(`\n${col("─".repeat(72), C.gray)}`);
+        console.log(`${progLabel} ${bar(globalIdx, totalRows)}  ${col(`${gPct}%`, C.bold)}`);
+        console.log(`${col("▸",C.cyan)} ${col(`Data ke-${globalIdx}`,C.bold)} ${S.arrow} ${col(truncate(nameVal,64), C.bold+C.white)}`);
 
-        // Rule baru: skip HANYA jika ada di LOG && ada di DB
         const inLog = namaGerejaInLog(nameVal);
-        const inDb = await namaGerejaExists(String(nameVal));
+        const cacheKey = String(nameVal).trim().toLowerCase();
+        let inDb;
+        const apiUrl = `${BASE_URL}/admin/gereja/check?nama=${encodeURIComponent(String(nameVal).trim())}`;
+        if (apiCache.has(cacheKey)) {
+          inDb = apiCache.get(cacheKey);
+          const icon = inDb ? col("● SUDAH ADA",C.green) : col("○ BELUM ADA",C.yellow);
+          console.log(`  ${col("[API GET]",C.dim)} ${col(truncate(apiUrl,68),C.gray)} ${S.arrow} ${icon} ${col("(cache)",C.dim)} ${S.dot} inLog=${inLog?col("ya",C.green):col("tidak",C.dim)}`);
+        } else {
+          const t0 = Date.now();
+          const live = await checkSingleViaAPI(driver, String(nameVal));
+          const elapsed = Date.now() - t0;
+          if (live === null) {
+            inDb = false;
+            console.log(`  ${col("[API GET]",C.yellow)} ${col(truncate(apiUrl,68),C.gray)} ${S.arrow} ${col("GAGAL",C.red)} ${col(`(${elapsed}ms)`,C.dim)} ${S.arrow} ${col("fallback BELUM ADA",C.dim)} ${S.dot} inLog=${inLog?col("ya",C.green):col("tidak",C.dim)}`);
+          } else {
+            inDb = live;
+            const icon = inDb ? col("● SUDAH ADA",C.green+C.bold) : col("○ BELUM ADA",C.yellow);
+            console.log(`  ${col("[API GET]",C.cyan)} ${col(truncate(apiUrl,68),C.gray)} ${S.arrow} ${icon} ${col(`(${elapsed}ms)`,C.dim)} ${S.dot} inLog=${inLog?col("ya",C.green):col("tidak",C.dim)}`);
+          }
+          apiCache.set(cacheKey, inDb);
+          if (inDb) dbCacheSet.add(cacheKey);
+        }
         if (inLog && inDb) {
-          console.log(`  ${progress} [!] Sudah ada di LOG & DB, skip. inLog=${inLog} inDb=${inDb}`);
+          console.log(`  ${S.skip} ${col("SKIP", C.bgYellow+C.bold)} ${col("sudah di LOG & DB",C.gray)} ${bar(idx+1, src.rows.length)}`);
           globalSkipBoth++;
           continue;
         }
         if (inLog && !inDb) {
-          console.log(`  ${progress} [i] Ada di LOG tapi BELUM di DB -> tetap input (tidak tulis log ulang). inLog=${inLog} inDb=${inDb}`);
+          console.log(`  ${col("→",C.yellow)} ${badge("LOG ada / DB belum", C.yellow)} ${col("tetap input (tidak tulis log ulang)",C.dim)}`);
         } else if (!inLog && inDb) {
-          console.log(`  ${progress} [i] Belum di LOG tapi sudah di DB -> tetap input & nanti tulis log. inLog=${inLog} inDb=${inDb}`);
+          console.log(`  ${col("→",C.magenta)} ${badge("LOG belum / DB ada", C.magenta)} ${col("tetap input & nanti tulis log",C.dim)}`);
         } else {
-          console.log(`  ${progress} [i] Belum di LOG & belum di DB -> input baru. inLog=${inLog} inDb=${inDb}`);
+          console.log(`  ${col("→",C.green)} ${badge("BARU", C.bgGreen)} ${col("belum di LOG & DB → input baru",C.white)}`);
         }
 
-      // Klik Tambah Gereja - tunggu modal benar-benar visible (fix ElementNotInteractableError)
-      const btnTambah = await driver.wait(until.elementLocated(By.css("button[data-bs-target='#modalAdd']")), 10000);
-      await driver.wait(until.elementIsVisible(btnTambah), 5000);
-      await driver.executeScript("arguments[0].scrollIntoView({block:'center'});", btnTambah);
-      await driver.executeScript("arguments[0].click();", btnTambah);
-      console.log("4. Klik Tambah Gereja");
-      // tunggu animasi Bootstrap fade -> #modalAdd.show
-      try { await driver.wait(until.elementLocated(By.css("#modalAdd.show")), 5000); } catch {}
-      await driver.sleep(600);
+        // Recovery: pastikan halaman masih di admin/gereja sebelum proses
+        await ensureOnGerejaPage(driver);
+
+        // Wrap seluruh proses input dalam try-catch agar 1 error tidak hentikan semua
+        try {
+          // Klik Tambah Gereja - tunggu modal benar-benar visible (fix ElementNotInteractableError)
+          const btnTambah = await driver.wait(until.elementLocated(By.css("button[data-bs-target='#modalAdd']")), 10000);
+          await driver.wait(until.elementIsVisible(btnTambah), 5000);
+          await driver.executeScript("arguments[0].scrollIntoView({block:'center'});", btnTambah);
+          await driver.executeScript("arguments[0].click();", btnTambah);
+          console.log(`  ${col("▶",C.cyan)} ${col("4. Klik Tambah Gereja", C.bold)} ${col("→ #modalAdd",C.dim)}`);
+          try { await driver.wait(until.elementLocated(By.css("#modalAdd.show")), 5000); } catch {}
+          await driver.sleep(600);
 
       const namaInput = await driver.wait(until.elementLocated(By.name("nama_gereja")), 5000);
       await driver.wait(until.elementIsVisible(namaInput), 5000);
@@ -473,22 +660,22 @@ async function runAutomation(opts) {
       await driver.sleep(200);
       try { await namaInput.clear(); } catch { await driver.executeScript("arguments[0].value=''; arguments[0].dispatchEvent(new Event('input',{bubbles:true}));", namaInput); }
       try { await namaInput.sendKeys(String(nameVal)); } catch { await driver.executeScript("arguments[0].value=arguments[1]; arguments[0].dispatchEvent(new Event('input',{bubbles:true})); arguments[0].dispatchEvent(new Event('change',{bubbles:true}));", namaInput, String(nameVal)); }
-      console.log(`5. Nama: ${nameVal}`);
+      console.log(`  ${col("▶",C.cyan)} ${col("5. Nama",C.bold)}  ${S.arrow} ${col(truncate(nameVal,62), C.white)}`);
 
       if (addressVal) {
         const addrStr = String(addressVal);
         const alamatEl = await driver.findElement(By.name("alamat"));
         await alamatEl.clear();
         await alamatEl.sendKeys(addrStr);
-        console.log(`   Alamat: ${addrStr.slice(0,50)}...`);
+        console.log(`  ${S.dot} ${col("Alamat",C.dim)} ${truncate(addrStr,56)}`);
 
         const wilayah = extractWilayah(addrStr);
-        console.log(`   Wilayah: ${JSON.stringify(wilayah)}`);
+        console.log(`  ${S.dot} ${col("Wilayah",C.dim)} ${col(JSON.stringify(wilayah), C.cyan)}`);
 
         if (wilayah.provinsi) {
           const ok = await select2Set(driver, "addProvinsi", wilayah.provinsi);
           if (ok) {
-            console.log(`   Provinsi: ${wilayah.provinsi}`);
+            console.log(`  ${S.ok} ${col("Provinsi",C.green)} ${S.arrow} ${col(wilayah.provinsi, C.white)}`);
             await driver.sleep(600);
             if (wilayah.kabupaten) {
               try {
@@ -500,7 +687,7 @@ async function runAutomation(opts) {
                 await driver.sleep(300);
                 const ok2 = await select2Set(driver, "addKabupaten", wilayah.kabupaten);
                 if (ok2) {
-                  console.log(`   Kabupaten: ${wilayah.kabupaten}`);
+                  console.log(`  ${S.ok} ${col("Kabupaten",C.green)} ${S.arrow} ${col(wilayah.kabupaten, C.white)}`);
                   await driver.sleep(600);
                   if (wilayah.kecamatan) {
                     try {
@@ -512,7 +699,7 @@ async function runAutomation(opts) {
                       await driver.sleep(300);
                       const ok3 = await select2Set(driver, "addKecamatan", wilayah.kecamatan);
                       if (ok3) {
-                        console.log(`   Kecamatan: ${wilayah.kecamatan}`);
+                        console.log(`  ${S.ok} ${col("Kecamatan",C.green)} ${S.arrow} ${col(wilayah.kecamatan, C.white)}`);
                         await driver.sleep(600);
                         if (wilayah.kelurahan) {
                           try {
@@ -523,18 +710,18 @@ async function runAutomation(opts) {
                             }, 5000);
                             await driver.sleep(300);
                             const ok4 = await select2Set(driver, "addKelurahan", wilayah.kelurahan);
-                            if (ok4) console.log(`   Kelurahan: ${wilayah.kelurahan}`);
+                            if (ok4) console.log(`  ${S.ok} ${col("Kelurahan",C.green)} ${S.arrow} ${col(wilayah.kelurahan, C.white)}`);
                             await driver.sleep(300);
-                          } catch { console.log(`   Kelurahan tidak terpilih: ${wilayah.kelurahan}`); }
+                          } catch { console.log(`  ${S.fail} ${col("Kelurahan tidak terpilih: "+wilayah.kelurahan, C.yellow)}`); }
                         }
                       }
-                    } catch { console.log(`   Kecamatan tidak terpilih: ${wilayah.kecamatan}`); }
+                    } catch { console.log(`  ${S.fail} ${col("Kecamatan tidak terpilih: "+wilayah.kecamatan, C.yellow)}`); }
                   }
                 }
-              } catch { console.log(`   Kabupaten tidak terpilih: ${wilayah.kabupaten}`); }
+              } catch { console.log(`  ${S.fail} ${col("Kabupaten tidak terpilih: "+wilayah.kabupaten, C.yellow)}`); }
             }
           } else {
-            console.log(`   Provinsi tidak ditemukan di dropdown: ${wilayah.provinsi}`);
+            console.log(`  ${S.warn} ${col("Provinsi tidak ditemukan: "+wilayah.provinsi, C.yellow)}`);
           }
         }
       }
@@ -543,7 +730,7 @@ async function runAutomation(opts) {
         const tel = await driver.findElement(By.name("kontak_telepon"));
         await tel.clear();
         await tel.sendKeys(String(phoneVal));
-        console.log(`   Telepon: ${phoneVal}`);
+        console.log(`  ${S.dot} ${col("Telepon",C.dim)} ${col(phoneVal, C.yellow)}`);
       }
 
       if (linkVal) {
@@ -552,17 +739,17 @@ async function runAutomation(opts) {
         const handles = await driver.getAllWindowHandles();
         const newHandle = handles[handles.length-1];
         await driver.switchTo().window(newHandle);
-        console.log("6. Buka link maps di tab baru...");
+        console.log(`  ${col("▶",C.cyan)} ${col("6. Link Maps → tab baru", C.bold)} ${col(truncate(linkVal,48),C.dim)}`);
         await driver.sleep(800);
         try {
           const searchInput = await driver.wait(until.elementLocated(By.css("input[name='q']")), 10000);
           await searchInput.click();
           await driver.sleep(150);
           await searchInput.sendKeys(Key.ENTER);
-          console.log("   Klik input search lalu Enter");
+          console.log(`  ${S.ok} ${col("Klik search + Enter",C.green)}`);
           await driver.sleep(1200);
         } catch {
-          console.log("   Input search tidak ditemukan, tetap pakai URL saat ini");
+          console.log(`  ${S.warn} ${col("Input search tidak ditemukan → pakai URL saat ini",C.yellow)}`);
           await driver.sleep(600);
         }
         const currentUrl = await driver.getCurrentUrl();
@@ -573,19 +760,18 @@ async function runAutomation(opts) {
         await linkInput.clear();
         await linkInput.sendKeys(currentUrl);
         await driver.executeScript("arguments[0].dispatchEvent(new Event('input'));", linkInput);
-        console.log(`   Link Maps: ${currentUrl.slice(0,80)}...`);
+        console.log(`  ${S.dot} ${col("Link Maps",C.dim)} ${col(truncate(currentUrl,76), C.cyan)}`);
       }
 
       if (websiteVal) {
         const platform = getPlatform(String(websiteVal));
         const sosmedSelect = await driver.findElement(By.css("#addSosmedList select[name='sosmed_platform[]']"));
-        // selenium Select helper
         const sel = new Select(sosmedSelect);
         try { await sel.selectByValue(platform); } catch { await sel.selectByVisibleText(platform); }
         const sosmedUrl = await driver.findElement(By.css("#addSosmedList input[name='sosmed_url[]']"));
         await sosmedUrl.clear();
         await sosmedUrl.sendKeys(String(websiteVal));
-        console.log(`   Sosmed: ${platform} -> ${websiteVal}`);
+        console.log(`  ${S.dot} ${col("Sosmed",C.dim)} ${col(platform, C.magenta)} ${S.arrow} ${col(truncate(websiteVal,48),C.cyan)}`);
       }
 
       const simpanBtn = await driver.wait(until.elementLocated(By.css("#modalAdd button[type='submit']")), 5000);
@@ -593,8 +779,65 @@ async function runAutomation(opts) {
       await driver.wait(until.elementIsEnabled(simpanBtn), 5000);
       await driver.executeScript("arguments[0].scrollIntoView({block:'center'});", simpanBtn);
       await driver.executeScript("arguments[0].click();", simpanBtn);
-      console.log(`7. Simpan diklik ${progress}`);
-      await driver.sleep(900);
+      console.log(`  ${col("▶",C.green)} ${col(`7. Simpan diklik`,C.bold+C.white)} ${col(`F${sIdx+1} ${idx+1}/${src.rows.length} G${globalIdx}`,C.dim)}`);
+      await driver.sleep(3000);
+
+      // Cek apakah muncul pesan error "Data sudah ada di database" (flash message via Lobibox setelah redirect)
+      let alreadyExists = false;
+      let serverMsg = '';
+      try {
+        // Lobibox notification: class "lobibox-notify-error" atau "lobibox-notify"
+        const notifs = await driver.findElements(By.css(".lobibox-notify"));
+        for (const n of notifs) {
+          const t = await n.getText();
+          if (t) serverMsg = t;
+          const cls = await n.getAttribute("class");
+          if (t.toLowerCase().includes("sudah ada") || t.toLowerCase().includes("duplicate") || (cls && cls.includes("error"))) {
+            if (t.toLowerCase().includes("sudah ada") || t.toLowerCase().includes("duplicate")) {
+              console.log(`   [!] SERVER REJECT (lobibox): ${t} -> ${nameVal}`);
+              alreadyExists = true; break;
+            }
+          }
+        }
+        if (!alreadyExists && notifs.length) {
+          // cek error khusus
+          try {
+            const err = await driver.findElement(By.css(".lobibox-notify-error"));
+            const et = await err.getText();
+            if (et.toLowerCase().includes("sudah ada")) { console.log(`   [!] SERVER REJECT (lobibox-error): ${et}`); alreadyExists = true; serverMsg = et; }
+          } catch {}
+        }
+      } catch (_) {}
+      try {
+        const alertDanger = await driver.findElement(By.css(".alert-danger"));
+        const alertText = await alertDanger.getText();
+        if (alertText.toLowerCase().includes("sudah ada") || alertText.toLowerCase().includes("duplicate")) {
+          console.log(`   [!] SERVER REJECT (alert): ${alertText} -> ${nameVal}`);
+          alreadyExists = true; serverMsg = alertText;
+        }
+      } catch (_) {}
+      // Juga cek URL flash via page source (kadang lobibox delay)
+      try {
+        const bodyText = await driver.findElement(By.css("body")).getText();
+        if (!alreadyExists && bodyText.toLowerCase().includes("data sudah ada di database")) {
+          console.log(`   [!] SERVER REJECT (body): Data sudah ada di database -> ${nameVal}`);
+          alreadyExists = true;
+        }
+      } catch {}
+      console.log(`  [API POST] /admin/gereja/add nama="${String(nameVal).slice(0,60)}" -> ${alreadyExists ? 'REJECT SUDAH ADA' : 'OK (diasumsikan berhasil)'} ${serverMsg ? '| msg: '+serverMsg.slice(0,80) : ''}`);
+
+      if (alreadyExists) {
+        // Masukkan ke cache supaya duplikat berikutnya langsung terdeteksi (update Map + Set)
+        const k = String(nameVal).trim().toLowerCase();
+        dbCacheSet.add(k); apiCache.set(k, true);
+        console.log(`   [CACHE] Ditambahkan: ${nameVal} (dari server reject) -> apiCache + dbCacheSet`);
+      } else {
+        // Sukses - tambah ke cache juga
+        const k = String(nameVal).trim().toLowerCase();
+        dbCacheSet.add(k); apiCache.set(k, true);
+        console.log(`   [CACHE] Ditambahkan: ${nameVal} (dari berhasil input) -> apiCache + dbCacheSet`);
+      }
+
       // tunggu modal tertutup & backdrop hilang sebelum loop berikutnya (fix stale/not-interactable di data berikutnya)
       try {
         await driver.wait(async () => {
@@ -624,25 +867,44 @@ async function runAutomation(opts) {
           await driver.sleep(500);
         }
       } catch {}
-      // Jangan tulis log ulang jika sudah ada di log
-      if (!inLog) {
-        writeLog(nameVal, "BERHASIL DITAMBAHKAN");
+
+      if (alreadyExists) {
+        console.log(`  ${S.skip} ${badge("SKIP SERVER", C.bgYellow)} ${col("ditolak server",C.yellow)} ${S.arrow} ${col(truncate(nameVal,48),C.dim)} ${col("(sudah ada)",C.dim)}`);
+        globalGagal++;
       } else {
-        console.log(`   [LOG] Sudah ada di log, tidak tulis ulang: ${nameVal}`);
+        if (!inLog) {
+          writeLog(nameVal, "BERHASIL DITAMBAHKAN");
+          console.log(`  ${S.ok} ${badge("BERHASIL", C.bgGreen)} ${col(truncate(nameVal,48),C.white)} ${S.arrow} ${col("log ditulis",C.green)}`);
+        } else {
+          console.log(`  ${S.ok} ${badge("BERHASIL", C.bgGreen)} ${col(truncate(nameVal,48),C.white)} ${S.arrow} ${col("sudah di log → tidak tulis ulang",C.dim)}`);
+        }
+        globalBerhasil++;
+        const elapsed = ((Date.now()-startedAt)/1000).toFixed(1);
+        console.log(`  ${col("▸ Progress",C.bold)} ${bar(globalIdx, totalRows)} ${S.dot} ${col(`berhasil: ${globalBerhasil}`,C.green+C.bold)} ${S.dot} ${col(`gagal: ${globalGagal}`,C.dim)} ${S.dot} ${col(fmtTime(elapsed), C.cyan)}`);
       }
-      globalBerhasil++;
-      const elapsed = ((Date.now()-startedAt)/1000).toFixed(1);
-      console.log(`   [PROGRESS] ${progress} => BERHASIL | total berhasil: ${globalBerhasil} | elapsed: ${elapsed}s`);
+        } catch (e) {
+          globalGagal++;
+          console.log(`\n  ${col("✘ ERROR", C.bgRed+C.white+C.bold)} ${col(truncate(nameVal,52),C.white)}`);
+          console.log(`  ${S.dot} ${col(e.message, C.red)}`);
+          console.log(`  ${S.dot} ${col(e.stack.split('\n')[0].slice(0,120), C.dim)}`);
+          try { await ensureOnGerejaPage(driver); } catch (_) {}
+          console.log(`  ${S.skip} ${col("SKIP item → lanjut berikutnya",C.yellow)}  ${bar(globalIdx, totalRows)}`);
+        }
       } // end idx loop
-      console.log(`\n[FILE SELESAI] ${src.file} (${sIdx+1}/${sources.length}) - berhasil di file ini: ${globalBerhasil} (kumulatif)`);
+      const fileElapsed = ((Date.now()-startedAt)/1000).toFixed(1);
+      console.log(`\n${col("┌─ FILE SELESAI",C.green)} ${badge(`${src.file}`, C.bgBlue)} ${col(`(${sIdx+1}/${sources.length})`,C.dim)} ${S.dot} ${col(`kumulatif berhasil: ${globalBerhasil}`, C.bold+C.green)} ${S.dot} ${col(`skip LOG+DB: ${globalSkipBoth}`,C.yellow)} ${S.dot} ${col(fmtTime(fileElapsed),C.cyan)}`);
     } // end sources loop
 
-    console.log(`\n[Selesai semua data] files=${sources.length} totalRows=${totalRows} berhasil=${globalBerhasil} skipBoth(LOG+DB)=${globalSkipBoth} elapsed=${((Date.now()-startedAt)/1000).toFixed(1)}s`);
-    console.table(sources.map((s,i)=>({ "#": i+1, file: s.file, rows: s.rows.length, sizeKB: s.sizeKB })) );
+    const totalElapsed = ((Date.now()-startedAt)/1000).toFixed(1);
+    console.log(boxTitle("SELESAI SEMUA DATA"));
+    console.log(`${S.ok} ${col(`Files: ${sources.length}`,C.bold)}  ${S.dot} ${col(`Total: ${totalRows}`,C.white)}  ${S.dot} ${badge(`BERHASIL ${globalBerhasil}`,C.bgGreen)}  ${badge(`SKIP ${globalSkipBoth}`,C.bgYellow)}  ${badge(`GAGAL ${globalGagal}`,C.bgRed)}  ${S.dot} ${col(fmtTime(totalElapsed),C.cyan)}`);
+    console.log(`${col("Rincian per-file:",C.bold)}`);
+    console.table(sources.map((s,i)=>({ "#": col(String(i+1),C.dim), file: col(s.file,C.cyan), rows: col(String(s.rows.length),C.white), sizeKB: s.sizeKB })));
   } finally {
-    console.log("\n[INFO] Menutup browser dalam 3 detik...");
+    console.log(`\n${S.info} ${col("Menutup browser dalam 3 detik...", C.dim)}`);
     await new Promise(r=>setTimeout(r,3000));
     await driver.quit();
+    console.log(`${S.ok} ${col("Browser closed", C.gray)}`);
   }
 }
 

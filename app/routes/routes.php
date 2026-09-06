@@ -21,6 +21,8 @@ $router->get('/logout', 'AuthController@logout');
 
 $router->get('/admin/dashboard', 'AdminController@index', array('auth'));
 
+$router->get('/admin/gereja/check', 'AdminGerejaController@check');
+$router->post('/admin/gereja/check-batch', 'AdminGerejaController@checkBatch');
 $router->get('/admin/gereja', 'AdminGerejaController@index', array('auth'));
 $router->get('/admin/gereja/edit/{id}', 'AdminGerejaController@editPage', array('auth'));
 $router->get('/admin/gereja/{id}', 'AdminGerejaController@get', array('auth'));

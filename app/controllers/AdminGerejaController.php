@@ -135,7 +135,14 @@ class AdminGerejaController extends Controller
             return;
         }
 
-        $slug = generateSlug($namaGereja);
+        $baseSlug = generateSlug($namaGereja);
+        $slug = $baseSlug;
+        $counter = 1;
+        while ($model->findBySlug($slug)) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+            if ($counter > 100) break;
+        }
         $data = array(
             'slug' => $slug,
             'nama_gereja' => $namaGereja,
@@ -151,7 +158,18 @@ class AdminGerejaController extends Controller
             'deskripsi' => isset($_POST['deskripsi']) ? sanitize($_POST['deskripsi'], 'string') : '',
         );
 
-        $result = $model->insert($data);
+        try {
+            $result = $model->insert($data);
+        } catch (Exception $e) {
+            // Fallback jika masih duplicate (race condition)
+            if (strpos($e->getMessage(), 'Duplicate entry') !== false || strpos($e->getMessage(), '1062') !== false) {
+                $slug = $baseSlug . '-' . time();
+                $data['slug'] = $slug;
+                $result = $model->insert($data);
+            } else {
+                throw $e;
+            }
+        }
         if ($result) {
             $this->saveFotos($result->id);
             $this->saveSocialMedia($result->id);
@@ -203,7 +221,16 @@ class AdminGerejaController extends Controller
             return;
         }
 
-        $slug = generateSlug($namaGereja);
+        $baseSlug = generateSlug($namaGereja);
+        $slug = $baseSlug;
+        $counter = 1;
+        $existingSlug = $model->findBySlug($slug);
+        while ($existingSlug && $existingSlug->id != $id) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+            if ($counter > 100) break;
+            $existingSlug = $model->findBySlug($slug);
+        }
         $data = array(
             'id' => $id,
             'slug' => $slug,
@@ -220,7 +247,16 @@ class AdminGerejaController extends Controller
             'deskripsi' => isset($_POST['deskripsi']) ? sanitize($_POST['deskripsi'], 'string') : '',
         );
 
-        $result = $model->update($data, $id);
+        try {
+            $result = $model->update($data, $id);
+        } catch (Exception $e) {
+            if (strpos($e->getMessage(), 'Duplicate entry') !== false || strpos($e->getMessage(), '1062') !== false) {
+                $data['slug'] = $baseSlug . '-' . time();
+                $result = $model->update($data, $id);
+            } else {
+                throw $e;
+            }
+        }
         if ($result !== false) {
             $this->saveFotos($id);
             $this->saveSocialMedia($id);
@@ -275,5 +311,47 @@ class AdminGerejaController extends Controller
         $model = new ModelGereja();
         $data = $model->rawQuery('SELECT id, name FROM villages WHERE district_id = ? ORDER BY name', array($districtId));
         return jsonResponse(200, 'OK', $data);
+    }
+
+    public function check()
+    {
+        // IDENTIK dengan AdminGerejaController::add() baris 130-133:
+        // $namaGereja = sanitize($_POST['nama_gereja'],'string'); $existing = $model->findByName($namaGereja);
+        $namaRaw = isset($_GET['nama']) ? $_GET['nama'] : (isset($_GET['q']) ? $_GET['q'] : '');
+        $namaRaw = trim($namaRaw);
+        if (empty($namaRaw)) {
+            return jsonResponse(400, 'Parameter nama diperlukan');
+        }
+        $model = new ModelGereja();
+        $namaGereja = sanitize($namaRaw, 'string');
+        $existing = $model->findByName($namaGereja);
+        $exists = $existing ? true : false;
+        return jsonResponse(200, $exists ? 'Data sudah ada di database.' : 'Data belum ada', array('exists' => $exists, 'nama' => $namaRaw, 'sanitized' => $namaGereja));
+    }
+
+    public function checkBatch()
+    {
+        // IDENTIK dengan add() per-item: sanitize + findByName
+        $input = file_get_contents('php://input');
+        $data = json_decode($input, true);
+        $names = array();
+        if (isset($data['names']) && is_array($data['names'])) {
+            $names = $data['names'];
+        } elseif (isset($_POST['names']) && is_array($_POST['names'])) {
+            $names = $_POST['names'];
+        }
+        if (empty($names)) {
+            return jsonResponse(400, 'Parameter names diperlukan');
+        }
+        $model = new ModelGereja();
+        $result = array();
+        foreach ($names as $n) {
+            $nTrim = trim($n);
+            if ($nTrim === '') continue;
+            // IDENTIK add(): sanitize + findByName
+            $namaGereja = sanitize($nTrim, 'string');
+            $result[$n] = $model->findByName($namaGereja) ? true : false;
+        }
+        return jsonResponse(200, 'OK', $result);
     }
 }
