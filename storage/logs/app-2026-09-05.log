@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 [2026-09-05 06:41:18] [ERROR] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'gereja-katolik-stasi-st-yohanes-daso-somi' for key 'slug' | File: C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+=======
+[2026-09-05 13:44:36] [ERROR] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'gereja-katolik-stasi-st-yohanes-daso-somi' for key 'slug' | File: C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+>>>>>>> ea854a8a7d33fe7a560f310cefa00d2e50ff0ab4
 (
     [exception_class] => PDOException
     [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\Model.php
@@ -10,7 +14,59 @@
 #4 {main}
 )
 
+<<<<<<< HEAD
 [2026-09-05 07:22:06] [ERROR] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'gereja-katolik-stasi-st-yohanes-daso-somi' for key 'slug' | File: C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+=======
+[2026-09-05 15:42:43] [ERROR] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'gereja-katolik-stasi-st-yohanes-daso-somi' for key 'slug' | File: C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(154): Model->insert(Array)
+#2 C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\xampp\htdocs\Gereja-Katolik-Indonesia\public\index.php(11): App->run(Array, Array)
+#4 {main}
+)
+
+[2026-09-05 16:07:01] [ERROR] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'gereja-katolik-stasi-st-yohanes-daso-somi' for key 'slug' | File: C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(154): Model->insert(Array)
+#2 C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\xampp\htdocs\Gereja-Katolik-Indonesia\public\index.php(11): App->run(Array, Array)
+#4 {main}
+)
+
+[2026-09-05 18:21:32] [ERROR] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'gereja-katolik-stasi-st-yoseph-beringin-jaya' for key 'slug' | File: C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(154): Model->insert(Array)
+#2 C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\xampp\htdocs\Gereja-Katolik-Indonesia\public\index.php(11): App->run(Array, Array)
+#4 {main}
+)
+
+[2026-09-05 18:29:21] [ERROR] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'gereja-katolik-st-yohanes' for key 'slug' | File: C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(154): Model->insert(Array)
+#2 C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\xampp\htdocs\Gereja-Katolik-Indonesia\public\index.php(11): App->run(Array, Array)
+#4 {main}
+)
+
+[2026-09-05 18:37:31] [ERROR] SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'gereja-katolik-st-paulus' for key 'slug' | File: C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+>>>>>>> ea854a8a7d33fe7a560f310cefa00d2e50ff0ab4
 (
     [exception_class] => PDOException
     [file] => C:\xampp\htdocs\Gereja-Katolik-Indonesia\app\core\Model.php
