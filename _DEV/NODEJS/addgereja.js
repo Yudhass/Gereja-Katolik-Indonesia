@@ -138,11 +138,11 @@ const DB_CONFIG = {
 const PROVINSI_LIST = [
   "ACEH","SUMATERA UTARA","SUMATERA BARAT","RIAU","JAMBI","SUMATERA SELATAN",
   "BENGKULU","LAMPUNG","KEPULAUAN BANGKA BELITUNG","KEPULAUAN RIAU",
-  "DKI JAKARTA","JAWA BARAT","JAWA TENGAH","DAERAH ISTIMEWA YOGYAKARTA",
+  "DAERAH KHUSUS IBUKOTA JAKARTA","DKI JAKARTA","JAWA BARAT","JAWA TENGAH","DAERAH ISTIMEWA YOGYAKARTA",
   "JAWA TIMUR","BANTEN","BALI","NUSA TENGGARA BARAT","NUSA TENGGARA TIMUR",
   "KALIMANTAN BARAT","KALIMANTAN TENGAH","KALIMANTAN SELATAN","KALIMANTAN TIMUR","KALIMANTAN UTARA",
   "SULAWESI UTARA","SULAWESI TENGAH","SULAWESI SELATAN","SULAWESI TENGGARA","GORONTALO","SULAWESI BARAT",
-  "MALUKU","MALUKU UTARA","PAPUA","PAPUA BARAT","PAPUA SELATAN","PAPUA TENGAH","PAPUA PEGUNUNGAN",
+  "MALUKU","MALUKU UTARA","PAPUA","PAPUA BARAT","PAPUA BARAT DAYA","PAPUA SELATAN","PAPUA TENGAH","PAPUA PEGUNUNGAN",
 ];
 
 // ---------------------------------------------------------------------------
@@ -176,39 +176,262 @@ function namaGerejaInLog(namaGereja) {
   return false;
 }
 
+// ---------------------------------------------------------------------------
+// Pemetaan alamat Bahasa Inggris (Google Maps) -> Bahasa Indonesia.
+// Contoh EN: "Dairi Regency, North Sumatra" ~= "Kabupaten Dairi, Sumatera Utara"
+//            "South Jakarta City, Jakarta"   ~= "Kota Jakarta Selatan, DKI Jakarta"
+//            "West Rawa, Kebayoran Baru"     ~= kelurahan "Rawa Barat"
+// ---------------------------------------------------------------------------
+// Bahasa Inggris (lowercase, tanpa "province") -> nama kanonis Indonesia (kolom provinces.name)
+const EN_PROVINCE_MAP = {
+  "aceh": "ACEH",
+  "north sumatra": "SUMATERA UTARA", "north sumatera": "SUMATERA UTARA",
+  "west sumatra": "SUMATERA BARAT", "west sumatera": "SUMATERA BARAT",
+  "riau": "RIAU",
+  "jambi": "JAMBI",
+  "south sumatra": "SUMATERA SELATAN", "south sumatera": "SUMATERA SELATAN",
+  "bengkulu": "BENGKULU",
+  "lampung": "LAMPUNG",
+  "bangka belitung": "KEPULAUAN BANGKA BELITUNG",
+  "bangka belitung islands": "KEPULAUAN BANGKA BELITUNG",
+  "kepulauan bangka belitung": "KEPULAUAN BANGKA BELITUNG",
+  "riau islands": "KEPULAUAN RIAU",
+  "kepulauan riau": "KEPULAUAN RIAU",
+  "jakarta": "DAERAH KHUSUS IBUKOTA JAKARTA",
+  "dki jakarta": "DAERAH KHUSUS IBUKOTA JAKARTA",
+  "special capital region of jakarta": "DAERAH KHUSUS IBUKOTA JAKARTA",
+  "daerah khusus ibukota jakarta": "DAERAH KHUSUS IBUKOTA JAKARTA",
+  "west java": "JAWA BARAT",
+  "central java": "JAWA TENGAH",
+  "east java": "JAWA TIMUR",
+  "yogyakarta": "DAERAH ISTIMEWA YOGYAKARTA",
+  "special region of yogyakarta": "DAERAH ISTIMEWA YOGYAKARTA",
+  "daerah istimewa yogyakarta": "DAERAH ISTIMEWA YOGYAKARTA",
+  "banten": "BANTEN",
+  "bali": "BALI",
+  "west nusa tenggara": "NUSA TENGGARA BARAT",
+  "east nusa tenggara": "NUSA TENGGARA TIMUR",
+  "west kalimantan": "KALIMANTAN BARAT",
+  "central kalimantan": "KALIMANTAN TENGAH",
+  "south kalimantan": "KALIMANTAN SELATAN",
+  "east kalimantan": "KALIMANTAN TIMUR",
+  "north kalimantan": "KALIMANTAN UTARA",
+  "north sulawesi": "SULAWESI UTARA",
+  "central sulawesi": "SULAWESI TENGAH",
+  "south sulawesi": "SULAWESI SELATAN",
+  "southeast sulawesi": "SULAWESI TENGGARA", "south east sulawesi": "SULAWESI TENGGARA",
+  "gorontalo": "GORONTALO",
+  "west sulawesi": "SULAWESI BARAT",
+  "maluku": "MALUKU",
+  "north maluku": "MALUKU UTARA", "north moluccas": "MALUKU UTARA",
+  "papua": "PAPUA",
+  "west papua": "PAPUA BARAT",
+  "southwest papua": "PAPUA BARAT DAYA", "south west papua": "PAPUA BARAT DAYA",
+  "south papua": "PAPUA SELATAN",
+  "central papua": "PAPUA TENGAH",
+  "highland papua": "PAPUA PEGUNUNGAN", "highlands papua": "PAPUA PEGUNUNGAN",
+  "papua highlands": "PAPUA PEGUNUNGAN", "papua pegunungan": "PAPUA PEGUNUNGAN",
+};
+
+const _EN_DIR_MAP = {
+  "south east": "Tenggara", "southeast": "Tenggara",
+  "south west": "Barat Daya", "southwest": "Barat Daya",
+  "north east": "Timur Laut", "northeast": "Timur Laut",
+  "north west": "Barat Laut", "northwest": "Barat Laut",
+  "north": "Utara", "south": "Selatan", "east": "Timur", "west": "Barat", "central": "Tengah",
+};
+
+// "North Sumatra" -> "Sumatera Utara"; "Central Tapanuli" -> "Tapanuli Tengah";
+// "South Jakarta" -> "Jakarta Selatan"; "Riau Islands" -> "Kepulauan Riau".
+// Nama yang sudah Bahasa Indonesia dikembalikan apa adanya (Title Case).
+function translateEnglishGeo(name) {
+  if (!name) return "";
+  const s = String(name).trim().replace(/\s+/g, " ");
+  if (!s) return "";
+  let low = s.toLowerCase();
+  // buang kata administratif Inggris di akhir ("Toba Regency" sudah dikupas pemanggil, ini pengaman)
+  low = low.replace(/\s+(province|regency|city|district|sub-district|subdistrict|village)\s*$/, "").trim();
+  // "X Islands" -> "Kepulauan X" ("Riau Islands" -> "Kepulauan Riau")
+  let isIslands = false;
+  if (/\bislands\s*$/.test(low)) { isIslands = true; low = low.replace(/\s*islands\s*$/, "").trim(); }
+  // pindahkan kata arah Inggris di DEPAN ke belakang dalam Bahasa Indonesia
+  const dirKeys = Object.keys(_EN_DIR_MAP).sort((a, b) => b.length - a.length); // "south east" dicek sebelum "south"
+  let dirID = "";
+  for (const k of dirKeys) {
+    if (low === k) { dirID = _EN_DIR_MAP[k]; low = ""; break; }
+    if (low.startsWith(k + " ")) { dirID = _EN_DIR_MAP[k]; low = low.slice(k.length).trim(); break; }
+  }
+  low = low.replace(/^of\s+/, "").trim(); // sisa "City of ..."
+  low = low.replace(/\bsumatra\b/g, "sumatera"); // ejaan EN "Sumatra" -> ID "Sumatera"
+  let titled = low.split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  if (isIslands) titled = (titled ? "Kepulauan " + titled : "Kepulauan").trim();
+  if (dirID) titled = (titled ? titled + " " + dirID : dirID).trim();
+  return titled;
+}
+
+function _cleanAddrPart(p) {
+  // buang kode pos di akhir ("North Sumatra 22253" -> "North Sumatra")
+  return String(p || "").trim().replace(/\s+\d{5}\s*$/, "").trim();
+}
+
+function _stripPlusCode(p) {
+  // plus code kadang menempel dengan nama ("9CCJ+944 Hutarea" -> "Hutarea")
+  const s = String(p || "").trim();
+  const m = s.match(/^[A-Z0-9]{4}\+\S*\s+(.+)$/i);
+  if (m) return m[1].trim();
+  if (/^[A-Z0-9]{4}\+\S*\s*$/i.test(s)) return "";
+  return s;
+}
+
+function _isNoisePart(p) {
+  // Bagian alamat yang BUKAN nama wilayah: plus code, "Unnamed Road", angka/kode pos,
+  // sebutan administratif telanjang ("City", "Kota", "RT.7/RW.6"), dsb.
+  const s = _stripPlusCode(String(p || "").trim());
+  if (!s) return true;
+  const low = s.toLowerCase();
+  if (/^[a-z0-9]{4}\+/.test(low)) return true;
+  if (/^(unnamed\s+road|unnamed\s+rd)\b/.test(low)) return true;
+  if (/^[\d\s.,\-/]+$/.test(s)) return true;
+  if (["city", "cbd", "jalan", "jl", "jl.", "gang", "kota", "kabupaten", "kab.", "kecamatan", "kec.", "kelurahan", "desa", "dusun", "pulau sumatera", "pulau"].includes(low)) return true;
+  if (/^(rt\.?|rw\.?|no\.?)\b[\s\d./rwrtno]*$/i.test(s)) return true;
+  if (/^(gereja(\s+katolik)?|pastoran|paroki)\s*$/i.test(s)) return true;
+  return false;
+}
+
+function _isStreetLike(c) {
+  // Kandidat yang terlihat seperti nama jalan/nomor/gedung/gereja -> jangan jadikan wilayah.
+  // NB: pakai \b agar "No" tidak cocok dengan "North", "Jl" tidak cocok dengan "Jli", dsb.
+  return /^(Jl\b\.?|Jalan\b|Gang\b|RT\b\.?|RW\b\.?|No\b\.?|Unnamed\b|Blok\b|Km\b|Gedung\b|Kompleks\b|Komplek\b|Perumnas\b|Perumahan\b|Kapling\b|Kav\b\.?|Lantai\b|Lt\b\.?|St\b|Gereja\b|Pastoran\b|Paroki\b|Musala\b|Masjid\b|Pulau\s+Sumatera\s*$)/i.test(String(c || "").trim());
+}
+
+function _expandAbbrev(low) {
+  // "Nusa Tenggara Tim." -> "nusa tenggara timur", "Dusun Tim." -> "dusun timur"
+  return String(low || "")
+    .replace(/\but\.?(?=\s|$)/g, "utara")
+    .replace(/\btim\.?(?=\s|$)/g, "timur")
+    .replace(/\bteng\.?(?=\s|$)/g, "tengah")
+    .replace(/\bsel\.?(?=\s|$)/g, "selatan")
+    .replace(/\bbar\.?(?=\s|$)/g, "barat")
+    .replace(/\s+/g, " ").trim();
+}
+
+function _matchProvinsi(partRaw) {
+  const cleaned = _cleanAddrPart(partRaw);
+  if (!cleaned) return "";
+  // 1) kamus Inggris/alias dulu (agar "Riau Islands" -> KEPULAUAN RIAU, bukan "RIAU")
+  const low = cleaned.toLowerCase().replace(/\s+/g, " ").replace(/\s+province\s*$/, "").trim();
+  if (EN_PROVINCE_MAP[low]) return EN_PROVINCE_MAP[low];
+  const exp = _expandAbbrev(low);
+  if (EN_PROVINCE_MAP[exp]) return EN_PROVINCE_MAP[exp];
+  // 2) Bahasa Indonesia langsung (nama panjang dicek dulu agar "Kepulauan Riau" menang atas "Riau")
+  const up = cleaned.toUpperCase();
+  const upExp = exp.toUpperCase();
+  const sorted = [...PROVINSI_LIST].sort((a, b) => b.length - a.length);
+  for (const p of sorted) {
+    if (up.includes(p) || upExp.includes(p)) return p;
+  }
+  if (/(^|[\s,])JAKARTA([\s,]|$)/.test(up)) return "DAERAH KHUSUS IBUKOTA JAKARTA";
+  // 3) generik: terjemahkan arah EN lalu cocokkan ("North Sumatra" -> "Sumatera Utara")
+  const tr = translateEnglishGeo(cleaned);
+  if (tr) {
+    const tru = tr.toUpperCase();
+    for (const p of sorted) {
+      if (tru === p || tru.includes(p) || p.includes(tru)) return p;
+    }
+    if (tru === "JAKARTA") return "DAERAH KHUSUS IBUKOTA JAKARTA";
+  }
+  return "";
+}
+
+function _matchKabupaten(partRaw) {
+  // Mengembalikan nama kabupaten/kota (tanpa "Kabupaten/Kota/Regency/City") atau "".
+  const cleaned = _cleanAddrPart(_stripPlusCode(partRaw));
+  if (!cleaned || _isNoisePart(partRaw)) return "";
+  let m;
+  // Indonesia: "Kabupaten X" / "Kota X" / "Kab. X"
+  m = cleaned.match(/^(?:Kota|Kabupat[ae]n|Kab\.)\s+(.+)/i);
+  if (m && m[1].trim()) return m[1].trim();
+  // Inggris: "X Regency" / "X City" / "City of X"
+  m = cleaned.match(/^(.*?)\s+Regency$/i);
+  if (m && m[1].trim()) return translateEnglishGeo(m[1].trim());
+  m = cleaned.match(/^(.*?)\s+City$/i);
+  if (m && m[1].trim()) return translateEnglishGeo(m[1].trim());
+  m = cleaned.match(/^City\s+of\s+(.+)/i);
+  if (m && m[1].trim()) return translateEnglishGeo(m[1].trim());
+  return "";
+}
+
 function extractWilayah(alamat) {
   const result = { provinsi: "", kabupaten: "", kecamatan: "", kelurahan: "" };
   if (!alamat) return result;
-  let parts = alamat.split(",").map(p => p.trim()).filter(Boolean);
+  let parts = String(alamat).split(",").map(p => p.trim()).filter(Boolean);
 
+  // 1) Provinsi: cari dari belakang (posisi paling akhir)
   for (let idx = parts.length - 1; idx >= 0; idx--) {
-    const part = parts[idx];
-    for (const p of PROVINSI_LIST) {
-      if (part.toUpperCase().includes(p)) {
-        result.provinsi = p;
-        parts.splice(idx, 1);
-        break;
-      }
+    const found = _matchProvinsi(parts[idx]);
+    if (found) { result.provinsi = found; parts.splice(idx, 1); break; }
+  }
+  // normalisasi varian Jakarta ke nama kanonis DB (provinces.name)
+  if (result.provinsi === "DKI JAKARTA") result.provinsi = "DAERAH KHUSUS IBUKOTA JAKARTA";
+
+  // 2) Kabupaten/Kota: pola Indonesia (Kabupaten/Kota/Kab.) atau Inggris (X Regency / X City / City of X)
+  for (let idx = parts.length - 1; idx >= 0; idx--) {
+    const name = _matchKabupaten(parts[idx]);
+    if (name) { result.kabupaten = name; parts.splice(idx, 1); break; }
+  }
+  // fallback: bagian non-noise terakhir dianggap kabupaten
+  // (mis. "..., Porsea, Toba" -> kabupaten "Toba")
+  if (!result.kabupaten) {
+    for (let idx = parts.length - 1; idx >= 0; idx--) {
+      if (_isNoisePart(parts[idx])) continue;
+      const c = _cleanAddrPart(_stripPlusCode(parts[idx]));
+      if (!c) continue;
+      if (_isStreetLike(c)) continue;
+      const cand = translateEnglishGeo(c);
+      if (cand && cand.length < 60) { result.kabupaten = cand; parts.splice(idx, 1); break; }
     }
-    if (result.provinsi) break;
   }
 
+  // 3) Kecamatan: prefiks Indonesia (Kec./Kecamatan) atau Inggris (X District) dulu ...
   for (let idx = parts.length - 1; idx >= 0; idx--) {
-    const part = parts[idx];
-    const m = part.match(/^(?:Kota|Kabupat[ae]n|Kab\.)\s+(.+)/i);
-    if (m) { result.kabupaten = m[1].trim(); parts.splice(idx, 1); break; }
+    if (_isNoisePart(parts[idx])) continue;
+    const c = _cleanAddrPart(_stripPlusCode(parts[idx]));
+    if (!c) continue;
+    let m = c.match(/^(?:Kecamat[ae]n|Kec\.|Distrik)\s+(.+)/i);
+    if (m && m[1].trim()) { result.kecamatan = translateEnglishGeo(m[1].trim()); parts.splice(idx, 1); break; }
+    m = c.match(/^(.*?)\s+(?:District|Sub-?district)$/i);
+    if (m && m[1].trim()) { result.kecamatan = translateEnglishGeo(m[1].trim()); parts.splice(idx, 1); break; }
   }
-  if (!result.kabupaten && parts.length) result.kabupaten = parts.pop();
+  // ... fallback: bagian non-noise terakhir = kecamatan (alamat tanpa "Kec.",
+  // mis. "Laut Dendang, Percut Sei Tuan" -> kecamatan "Percut Sei Tuan")
+  if (!result.kecamatan) {
+    for (let idx = parts.length - 1; idx >= 0; idx--) {
+      if (_isNoisePart(parts[idx])) continue;
+      const c = _cleanAddrPart(_stripPlusCode(parts[idx]));
+      if (!c) continue;
+      if (_isStreetLike(c)) continue;
+      const tr = translateEnglishGeo(c);
+      if (tr && tr.length < 60) { result.kecamatan = tr; parts.splice(idx, 1); break; }
+    }
+  }
 
-  for (let idx = parts.length - 1; idx >= 0; idx--) {
-    const part = parts[idx];
-    const m = part.match(/^(?:Kecamat[ae]n|Kec\.)\s+(.+)/i);
-    if (m) { result.kecamatan = m[1].trim(); parts.splice(idx, 1); break; }
-  }
-  if (parts.length) {
-    let last = parts[parts.length - 1];
-    last = last.replace(/^(?:Kelurahan|Kel\.|Desa|Dusun)\s+/i, "").trim();
-    if (last && last.length < 60) result.kelurahan = last;
+  // 4) Kelurahan/Desa: bagian non-noise terakhir yang tersisa
+  for (let pass = 0; pass < 2 && !result.kelurahan; pass++) {
+    const relaxed = pass === 1; // pass 2: izinkan nama berawalan "Kota ..." (mis. kelurahan "Kota Uneng")
+    for (let idx = parts.length - 1; idx >= 0; idx--) {
+      if (_isNoisePart(parts[idx])) continue;
+      let c = _cleanAddrPart(_stripPlusCode(parts[idx]));
+      if (!c) continue;
+      c = c.replace(/^(?:Kelurahan|Kel\.|Desa|Dusun|Dsn\.?|Ling\.?|Kp\.?|Kampung|Gampong|Jorong|Nagari|Banjar|Dukuh|Village)\s+/i, "").trim();
+      if (!c) continue;
+      if (!relaxed && /^(?:Kota|Kabupat[ae]n|Kab\.|Kecamat[ae]n|Kec\.)\b/i.test(c)) continue;
+      if (_isStreetLike(c)) continue;
+      if (c.length >= 60) continue;
+      if (result.kecamatan && c.toLowerCase() === result.kecamatan.toLowerCase()) continue;
+      if (result.kabupaten && c.toLowerCase() === result.kabupaten.toLowerCase()) continue;
+      result.kelurahan = translateEnglishGeo(c);
+      break;
+    }
   }
   return result;
 }
@@ -378,6 +601,21 @@ async function select2Set(driver, selectId, value) {
     for (const { val, txt } of opts) {
       if (txt.toUpperCase().includes(value.toUpperCase()) || val.toUpperCase().includes(value.toUpperCase())) {
         found = { val, txt }; break;
+      }
+    }
+  }
+  if (!found) {
+    // fallback: abaikan spasi/tanda baca ("Tanjung Pinang" ~= "TANJUNGPINANG",
+    // "Siborong Borong" ~= "SIBORONGBORONG") - umum di data terjemahan Inggris
+    const norm = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const nv = norm(value);
+    if (nv.length >= 3) {
+      for (const { val, txt } of opts) {
+        const nt = norm(txt), nvv = norm(val);
+        if ((nt.length >= 3 && (nt.includes(nv) || nv.includes(nt))) ||
+            (nvv.length >= 3 && (nvv.includes(nv) || nv.includes(nvv)))) {
+          found = { val, txt }; break;
+        }
       }
     }
   }
