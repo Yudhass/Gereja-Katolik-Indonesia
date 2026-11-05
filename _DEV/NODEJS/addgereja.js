@@ -26,10 +26,9 @@ const path = require("path");
 const XLSX = require("xlsx");
 const mysql = require("mysql2/promise");
 
-// Selenium
+// Selenium (driver diurus otomatis via Selenium Manager bawaan selenium-webdriver)
 const { Builder, By, until, Key, Select } = require("selenium-webdriver");
 const chrome = require("selenium-webdriver/chrome");
-require("chromedriver");
 
 // ---------------------------------------------------------------------------
 // Konfigurasi (mirror Python)

@@ -1,0 +1,16 @@
+{
+  "name": "gereja-cleaner-desktop",
+  "version": "1.0.0",
+  "description": "Aplikasi desktop untuk mencari data gereja yang provinsi / kabupaten_kota / kecamatan / kelurahan-nya kosong, lalu buka banyak tab edit sekaligus di browser.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "dependencies": {
+    "mysql2": "^3.11.0"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}

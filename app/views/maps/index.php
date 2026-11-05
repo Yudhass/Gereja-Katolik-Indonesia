@@ -14,7 +14,7 @@ foreach ($gerejaList as $g) {
                 'tanggal' => $j->tanggal,
                 'waktu' => date('H:i', strtotime($j->waktu_mulai)),
                 'kategori' => $j->kategori,
-                'keterangan' => $j->keterangan
+                'keterangan' => isset($j->keterangan) ? (string)$j->keterangan : ''
             );
         }
     }
@@ -24,8 +24,26 @@ foreach ($gerejaList as $g) {
     $socmedData = array();
     if (isset($allSocial[$g->id])) {
         foreach ($allSocial[$g->id] as $s) {
-            $socmedData[] = array('platform' => $s->platform, 'url' => $s->url);
+            if (is_object($s)) {
+                $socmedData[] = array('platform' => $s->platform, 'url' => $s->url);
+            } elseif (is_array($s)) {
+                $socmedData[] = array('platform' => $s['platform'], 'url' => $s['url']);
+            }
         }
+    }
+    // $allFoto kini berisi array string URL (dari bulk query); tetap dukung format lama (array objek)
+    $fotoUrls = array();
+    if (isset($allFoto[$g->id]) && is_array($allFoto[$g->id])) {
+        foreach (array_slice($allFoto[$g->id], 0, 5) as $f) {
+            $fotoUrls[] = is_object($f) ? $f->foto_url : $f;
+        }
+    }
+    // Potong deskripsi agar JSON peta tidak membengkak (detail lengkap ada di halaman detail)
+    $deskripsi = isset($g->deskripsi) ? (string)$g->deskripsi : '';
+    if (function_exists('mb_strlen') && mb_strlen($deskripsi, 'UTF-8') > 800) {
+        $deskripsi = mb_substr($deskripsi, 0, 800, 'UTF-8');
+    } elseif (strlen($deskripsi) > 800) {
+        $deskripsi = substr($deskripsi, 0, 800);
     }
     $gerejaJson[] = array(
         'id' => $g->id,
@@ -36,17 +54,23 @@ foreach ($gerejaList as $g) {
         'kecamatan' => $g->kecamatan,
         'kelurahan' => $g->kelurahan,
         'telepon' => $g->kontak_telepon,
-        'deskripsi' => $g->deskripsi,
+        'deskripsi' => $deskripsi,
         'slug' => $g->slug ? $g->slug : $g->id,
         'lat' => $mapLat,
         'lng' => $mapLng,
         'link_maps' => $g->link_maps,
-        'foto' => isset($allFoto[$g->id]) ? $allFoto[$g->id] : array(),
+        'foto' => $fotoUrls,
         'jadwal' => $jdw,
         'social' => $socmedData
     );
 }
 $gerejaJsonEncoded = json_encode($gerejaJson);
+if ($gerejaJsonEncoded === false) {
+    $gerejaJsonEncoded = '[]';
+}
+// Bebaskan memori sebelum merangkai <script> besar
+$totalGereja = isset($gerejaJson) ? count($gerejaJson) : 0;
+unset($gerejaJson, $gerejaList, $allJadwal, $allFoto, $allSocial);
 ?>
 
 <style>
@@ -341,7 +365,7 @@ $gerejaJsonEncoded = json_encode($gerejaJson);
         <i class="bx bx-map" style="font-size:1.2rem; flex-shrink:0;"></i>
         <div class="header-text">
             <h1>Peta Gereja Katolik</h1>
-            <span><?= count($gerejaList); ?> gereja ditampilkan</span>
+            <span><?= isset($totalGereja) ? (int)$totalGereja : 0; ?> gereja ditampilkan</span>
         </div>
     </div>
     <button class="btn-header btn-filter-toggle <?= $hasFilter ? 'active-filter' : ''; ?>" onclick="toggleFilter()">
@@ -351,6 +375,8 @@ $gerejaJsonEncoded = json_encode($gerejaJson);
 </div>
 
 <div id="map"></div>
+
+<script>var gerejaData = <?php echo $gerejaJsonEncoded; unset($gerejaJsonEncoded); ?>;</script>
 
 <?php
 $mapScripts = '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>';
@@ -381,7 +407,6 @@ L.control.layers({
 
 var markers = [];
 var bounds = [];
-var gerejaData = ' . $gerejaJsonEncoded . ';
 var markerClusterGroup = L.markerClusterGroup({
     iconCreateFunction: function(cluster) {
         var count = cluster.getChildCount();

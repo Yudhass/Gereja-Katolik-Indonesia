@@ -26,28 +26,57 @@ class MapsController extends Controller
             $provinsiList[] = $p->name;
         }
 
-        $allGereja = $modelGereja->all();
+        $allGereja = $modelGereja->rawQuery(
+            'SELECT id, slug, nama_gereja, alamat, provinsi, kabupaten_kota, kecamatan, kelurahan, link_maps, latitude, longitude, kontak_telepon, deskripsi FROM gereja WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND latitude != "" AND longitude != ""'
+        );
 
         $gerejaList = array();
         $allJadwal = array();
         $allFoto = array();
         $allSocial = array();
 
+        $gerejaIds = array();
         foreach ($allGereja as $g) {
             if (empty($g->latitude) || empty($g->longitude)) continue;
+            // (float) cast "0" / "0.0" juga lolos empty? tidak — 0 dianggap empty, jadi aman dilewati
+            if ((float)$g->latitude == 0 || (float)$g->longitude == 0) continue;
 
             $gerejaList[] = $g;
-            $allJadwal[$g->id] = $modelJadwal->getByGereja($g->id);
+            $gerejaIds[] = $g->id;
+        }
+        // Bebaskan hasil mentah agar tidak dobel di memori
+        unset($allGereja);
 
-            $fotoList = $modelFoto->getByGereja($g->id);
-            $fotoUrls = array();
-            foreach ($fotoList as $f) {
-                $fotoUrls[] = $f->foto_url;
+        // Bulk-load relasi dengan 3 query (hindari N+1 query per gereja)
+        if (!empty($gerejaIds)) {
+            foreach (array_chunk($gerejaIds, 500) as $chunk) {
+                $ph = implode(',', array_fill(0, count($chunk), '?'));
+
+                $jadwalRows = $modelJadwal->rawQuery(
+                    "SELECT gereja_id, hari, tanggal, waktu_mulai, kategori, keterangan FROM jadwal_misa WHERE gereja_id IN ($ph)",
+                    $chunk
+                );
+                foreach ($jadwalRows as $j) {
+                    $allJadwal[$j->gereja_id][] = $j;
+                }
+
+                $fotoRows = $modelFoto->rawQuery(
+                    "SELECT gereja_id, foto_url FROM gereja_foto WHERE gereja_id IN ($ph) ORDER BY urutan ASC, id ASC",
+                    $chunk
+                );
+                foreach ($fotoRows as $f) {
+                    // Simpan langsung URL-nya agar view tidak perlu loop objek lagi
+                    $allFoto[$f->gereja_id][] = $f->foto_url;
+                }
+
+                $socialRows = $modelSocial->rawQuery(
+                    "SELECT gereja_id, platform, url FROM gereja_social_media WHERE gereja_id IN ($ph) ORDER BY urutan ASC, id ASC",
+                    $chunk
+                );
+                foreach ($socialRows as $s) {
+                    $allSocial[$s->gereja_id][] = $s;
+                }
             }
-            $allFoto[$g->id] = $fotoUrls;
-
-            $socialList = $modelSocial->getByGereja($g->id);
-            $allSocial[$g->id] = $socialList;
         }
 
         $data = array(

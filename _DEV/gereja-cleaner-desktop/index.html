@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gereja Cleaner - Data Wilayah Kosong</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">⛪</div>
+    <div>
+      <h1>Gereja Cleaner</h1>
+      <p>Wilayah kosong &amp; alamat bertanda (S)</p>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="stat-num" id="statTotal">–</span><span class="stat-label">Total gereja</span></div>
+    <div class="stat danger"><span class="stat-num" id="statKosong">–</span><span class="stat-label">Wilayah kosong</span></div>
+    <div class="stat warn"><span class="stat-num" id="statAlamat">–</span><span class="stat-label">Alamat (S)</span></div>
+    <div class="stat ok"><span class="stat-num" id="statDipilih">0</span><span class="stat-label">Dipilih</span></div>
+  </div>
+</header>
+
+<section class="panel config">
+  <div class="cfg-grid">
+    <label>Host<input id="dbHost" value="localhost" /></label>
+    <label>Port<input id="dbPort" value="3306" /></label>
+    <label>User<input id="dbUser" value="root" /></label>
+    <label>Password<input id="dbPass" type="password" placeholder="(kosong)" /></label>
+    <label>Database<input id="dbName" value="db_gereja" /></label>
+    <label class="wide">Base URL edit<input id="baseUrl" value="http://192.168.1.240/Gereja-Katolik-Indonesia/admin/gereja/edit/" /></label>
+  </div>
+  <div class="cfg-actions">
+    <button id="btnTest" class="btn ghost">🔌 Tes Koneksi</button>
+    <button id="btnLoad" class="btn primary">🔄 Ambil Data Kosong</button>
+    <span id="cfgMsg" class="msg"></span>
+  </div>
+</section>
+
+<section class="panel toolbar">
+  <div class="tools-left">
+    <input id="search" type="search" placeholder="🔍 Cari nama / alamat / id..." />
+    <select id="filterJenis">
+      <option value="semua">Semua bermasalah</option>
+      <option value="provinsi">Provinsi kosong</option>
+      <option value="kabupaten_kota">Kab/Kota kosong</option>
+      <option value="kecamatan">Kecamatan kosong</option>
+      <option value="kelurahan">Kelurahan kosong</option>
+      <option value="alamat_tidak_lengkap">Alamat bertanda (S)</option>
+      <option value="alamat_tanpa_tanda_s">Alamat tanpa tanda (S)</option>
+    </select>
+    <select id="perPage">
+      <option value="25">25 / halaman</option>
+      <option value="50" selected>50 / halaman</option>
+      <option value="100">100 / halaman</option>
+    </select>
+  </div>
+  <div class="tools-right">
+    <button id="btnPick10" class="btn small">✓ Pilih 10</button>
+    <button id="btnPick20" class="btn small">✓ Pilih 20</button>
+    <button id="btnPickPage" class="btn small ghost">✓ Halaman ini</button>
+    <button id="btnClear" class="btn small ghost">✕ Bersihkan</button>
+  </div>
+</section>
+
+<section class="panel actionbar">
+  <div class="action-info">
+    <strong id="infoDipilih">0 dipilih</strong>
+    <span id="infoFilter" class="dim"></span>
+  </div>
+  <div class="action-btns">
+    <button id="btnCopy" class="btn ghost">📋 Salin URL</button>
+    <button id="btnOpen" class="btn open">🚀 Buka di Browser (<span id="openCount">0</span> tab)</button>
+  </div>
+</section>
+
+<main class="panel table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th class="c-check"><input type="checkbox" id="checkAll" title="Pilih halaman ini" /></th>
+        <th>ID</th>
+        <th>Nama Gereja</th>
+        <th>Alamat</th>
+        <th>Provinsi</th>
+        <th>Kab / Kota</th>
+        <th>Kecamatan</th>
+        <th>Kelurahan</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody id="tbody">
+      <tr><td colspan="9" class="empty">Belum ada data. Klik <b>“Ambil Data Kosong”</b> dulu.</td></tr>
+    </tbody>
+  </table>
+  <div class="pagination">
+    <button id="prevPage" class="btn small ghost">← Sebelumnya</button>
+    <span id="pageInfo" class="dim">Halaman 0 / 0</span>
+    <button id="nextPage" class="btn small ghost">Berikutnya →</button>
+  </div>
+</main>
+
+<footer class="foot dim">
+  <span>URL dibuka: <code id="urlPreview">http://192.168.1.240/Gereja-Katolik-Indonesia/admin/gereja/edit/{id}</code></span>
+  <span id="toast" class="toast"></span>
+</footer>
+
+<script src="renderer.js"></script>
+</body>
+</html>
