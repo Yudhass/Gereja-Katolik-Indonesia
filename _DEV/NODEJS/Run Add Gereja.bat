@@ -1,4 +1,4 @@
 @echo off
 cd /d "%~dp0"
-node addgereja.js
+node addgereja_node.js
 pause

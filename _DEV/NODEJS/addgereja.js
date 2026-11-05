@@ -161,13 +161,13 @@ function writeLog(namaGereja, status = "") {
 
 function namaGerejaInLog(namaGereja) {
   if (!namaGereja || !fs.existsSync(LOG_PATH)) return false;
-  const nama = String(namaGereja).trim().toLowerCase();
+  const nama = sanitizeString(namaGereja).trim().toLowerCase();
   try {
     const content = fs.readFileSync(LOG_PATH, "utf-8");
     for (const line of content.split("\n")) {
       const parts = line.trim().split(" | ");
       if (parts.length >= 2) {
-        const logged = parts[1].split(" [")[0].trim().toLowerCase();
+        const logged = sanitizeString(parts[1].split(" [")[0]).trim().toLowerCase();
         if (logged === nama) return true;
       }
     }
@@ -449,14 +449,28 @@ function getPlatform(website) {
   return "website";
 }
 
+// Mirror PHP Security::sanitize($input,'string'): trim + strip_tags + htmlspecialchars ENT_QUOTES UTF-8
+function sanitizeString(input) {
+  let s = String(input == null ? "" : input).trim();
+  // strip_tags: remove HTML tags
+  s = s.replace(/<[^>]*>/g, "");
+  // htmlspecialchars ENT_QUOTES UTF-8
+  s = s.replace(/&/g, "&amp;")
+       .replace(/</g, "&lt;")
+       .replace(/>/g, "&gt;")
+       .replace(/"/g, "&quot;")
+       .replace(/'/g, "&#039;");
+  return s.trim();
+}
+
 async function loadAllNamaGerejaFromDB() {
   let conn;
   try {
     conn = await mysql.createConnection(DB_CONFIG);
     const [rows] = await conn.execute("SELECT nama_gereja FROM gereja");
     const set = new Set();
-    for (const r of rows) set.add(String(r.nama_gereja).trim().toLowerCase());
-    console.log(`[CACHE] Loaded ${set.size} nama_gereja dari DB`);
+    for (const r of rows) set.add(sanitizeString(r.nama_gereja).toLowerCase());
+    console.log(`[CACHE] Loaded ${set.size} nama_gereja dari DB (sanitized+lowercased)`);
     return set;
   } catch (e) {
     console.log(`  [CACHE DB] Error: ${e.message}`);
@@ -465,7 +479,7 @@ async function loadAllNamaGerejaFromDB() {
 }
 
 function namaGerejaExistsCached(cacheSet, nama) {
-  return cacheSet.has(String(nama).trim().toLowerCase());
+  return cacheSet.has(sanitizeString(nama).toLowerCase());
 }
 
 async function buildCookieHeader(driver) {
@@ -763,7 +777,7 @@ async function runAutomation(opts) {
         const inDb = namaGerejaExistsCached(dbCacheSet, String(nameVal));
         const checkIcon = inDb ? col("● SUDAH ADA", C.green) : col("○ BELUM ADA", C.yellow);
         console.log(`  ${tag} ${S.arrow} ${col(truncate(nameVal,52), C.white)} ${S.dot} ${checkIcon} ${S.dot} inLog=${inLog?col("ya",C.green):col("tidak",C.dim)} ${col("(dry-run DB)",C.dim)}`);
-        if (inLog && inDb) { skipBoth++; console.log(`  ${" ".repeat(6)}${S.skip} ${col(`SKIP LOG+DB`,C.gray)} ${col(nameVal, C.dim)}`); continue; }
+        if (inDb) { skipBoth++; console.log(`  ${" ".repeat(6)}${S.skip} ${col(`SKIP DB`,C.gray)} ${col(nameVal, C.dim)}`); continue; }
         willProcess++;
         if (inLog && !inDb) willProcessLogExists++;
         if (!inLog && inDb) willProcessDbExists++;
@@ -810,8 +824,9 @@ async function runAutomation(opts) {
     await driver.sleep(800);
 
     const apiCache = new Map();
-    let dbCacheSet = new Set();
-    console.log(`\n${S.info} ${col("Mode per-item API GET",C.bold+C.cyan)} ${col(`${BASE_URL}/admin/gereja/check?nama=...`,C.dim)} ${badge("identik add()",C.bgGreen)}`);
+    // Lebih presisi: cek keberadaan di DB langsung via cache yang dimuat sekali dari DB (bukan API yang bisa gagal & fallback BELUM ADA)
+    let dbCacheSet = await loadAllNamaGerejaFromDB();
+    console.log(`\n${S.info} ${col("Mode cek DB langsung",C.bold+C.cyan)} ${col("loadAllNamaGerejaFromDB() (sanitized+lowercased)",C.dim)} ${badge("akurat",C.bgGreen)}`);
 
     let globalIdx = 0;
     let globalBerhasil = 0;
@@ -841,37 +856,23 @@ async function runAutomation(opts) {
         console.log(`${col("▸",C.cyan)} ${col(`Data ke-${globalIdx}`,C.bold)} ${S.arrow} ${col(truncate(nameVal,64), C.bold+C.white)}`);
 
         const inLog = namaGerejaInLog(nameVal);
-        const cacheKey = String(nameVal).trim().toLowerCase();
-        let inDb;
-        const apiUrl = `${BASE_URL}/admin/gereja/check?nama=${encodeURIComponent(String(nameVal).trim())}`;
-        if (apiCache.has(cacheKey)) {
-          inDb = apiCache.get(cacheKey);
-          const icon = inDb ? col("● SUDAH ADA",C.green) : col("○ BELUM ADA",C.yellow);
-          console.log(`  ${col("[API GET]",C.dim)} ${col(truncate(apiUrl,68),C.gray)} ${S.arrow} ${icon} ${col("(cache)",C.dim)} ${S.dot} inLog=${inLog?col("ya",C.green):col("tidak",C.dim)}`);
-        } else {
-          const t0 = Date.now();
-          const live = await checkSingleViaAPI(driver, String(nameVal));
-          const elapsed = Date.now() - t0;
-          if (live === null) {
-            inDb = false;
-            console.log(`  ${col("[API GET]",C.yellow)} ${col(truncate(apiUrl,68),C.gray)} ${S.arrow} ${col("GAGAL",C.red)} ${col(`(${elapsed}ms)`,C.dim)} ${S.arrow} ${col("fallback BELUM ADA",C.dim)} ${S.dot} inLog=${inLog?col("ya",C.green):col("tidak",C.dim)}`);
+        const cacheKey = sanitizeString(nameVal).toLowerCase();
+        // Cek presisi langsung ke DB cache (tanpa API/network)
+        const inDb = namaGerejaExistsCached(dbCacheSet, nameVal);
+        const icon = inDb ? col("● SUDAH ADA",C.green+C.bold) : col("○ BELUM ADA",C.yellow);
+        console.log(`  ${col("[DB CHECK]",C.cyan)} ${col(truncate(nameVal,60),C.gray)} ${S.arrow} ${icon} ${col("(direct DB cache)",C.dim)} ${S.dot} inLog=${inLog?col("ya",C.green):col("tidak",C.dim)}`);
+        if (inDb) {
+          if (!inLog) {
+            writeLog(nameVal, "SUDAH ADA DI DB (SKIP INPUT)");
+            console.log(`  ${S.ok} ${badge("LOG DITULIS", C.bgGreen)} ${col(truncate(nameVal,48),C.white)} ${col("sudah di DB → log ditulis",C.green)}`);
           } else {
-            inDb = live;
-            const icon = inDb ? col("● SUDAH ADA",C.green+C.bold) : col("○ BELUM ADA",C.yellow);
-            console.log(`  ${col("[API GET]",C.cyan)} ${col(truncate(apiUrl,68),C.gray)} ${S.arrow} ${icon} ${col(`(${elapsed}ms)`,C.dim)} ${S.dot} inLog=${inLog?col("ya",C.green):col("tidak",C.dim)}`);
+            console.log(`  ${S.skip} ${col("SKIP", C.bgYellow+C.bold)} ${col("sudah di LOG & DB",C.gray)} ${bar(idx+1, src.rows.length)}`);
           }
-          apiCache.set(cacheKey, inDb);
-          if (inDb) dbCacheSet.add(cacheKey);
-        }
-        if (inLog && inDb) {
-          console.log(`  ${S.skip} ${col("SKIP", C.bgYellow+C.bold)} ${col("sudah di LOG & DB",C.gray)} ${bar(idx+1, src.rows.length)}`);
           globalSkipBoth++;
           continue;
         }
-        if (inLog && !inDb) {
+        if (inLog) {
           console.log(`  ${col("→",C.yellow)} ${badge("LOG ada / DB belum", C.yellow)} ${col("tetap input (tidak tulis log ulang)",C.dim)}`);
-        } else if (!inLog && inDb) {
-          console.log(`  ${col("→",C.magenta)} ${badge("LOG belum / DB ada", C.magenta)} ${col("tetap input & nanti tulis log",C.dim)}`);
         } else {
           console.log(`  ${col("→",C.green)} ${badge("BARU", C.bgGreen)} ${col("belum di LOG & DB → input baru",C.white)}`);
         }
@@ -1065,12 +1066,12 @@ async function runAutomation(opts) {
 
       if (alreadyExists) {
         // Masukkan ke cache supaya duplikat berikutnya langsung terdeteksi (update Map + Set)
-        const k = String(nameVal).trim().toLowerCase();
+        const k = sanitizeString(nameVal).toLowerCase();
         dbCacheSet.add(k); apiCache.set(k, true);
         console.log(`   [CACHE] Ditambahkan: ${nameVal} (dari server reject) -> apiCache + dbCacheSet`);
       } else {
         // Sukses - tambah ke cache juga
-        const k = String(nameVal).trim().toLowerCase();
+        const k = sanitizeString(nameVal).toLowerCase();
         dbCacheSet.add(k); apiCache.set(k, true);
         console.log(`   [CACHE] Ditambahkan: ${nameVal} (dari berhasil input) -> apiCache + dbCacheSet`);
       }
@@ -1106,8 +1107,15 @@ async function runAutomation(opts) {
       } catch {}
 
       if (alreadyExists) {
-        console.log(`  ${S.skip} ${badge("SKIP SERVER", C.bgYellow)} ${col("ditolak server",C.yellow)} ${S.arrow} ${col(truncate(nameVal,48),C.dim)} ${col("(sudah ada)",C.dim)}`);
-        globalGagal++;
+        const k = sanitizeString(nameVal).toLowerCase();
+        dbCacheSet.add(k);
+        if (!inLog) {
+          writeLog(nameVal, "SUDAH ADA DI DB (SKIP INPUT)");
+          console.log(`  ${S.ok} ${badge("LOG DITULIS", C.bgGreen)} ${col(truncate(nameVal,48),C.white)} ${col("server: sudah ada → log ditulis",C.green)}`);
+        } else {
+          console.log(`  ${S.skip} ${badge("SKIP SERVER", C.bgYellow)} ${col("ditolak server",C.yellow)} ${S.arrow} ${col(truncate(nameVal,48),C.dim)} ${col("(sudah ada)",C.dim)}`);
+        }
+        globalSkipBoth++;
       } else {
         if (!inLog) {
           writeLog(nameVal, "BERHASIL DITAMBAHKAN");
