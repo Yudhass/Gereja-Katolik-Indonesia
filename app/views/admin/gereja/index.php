@@ -191,7 +191,7 @@ foreach ($provinces as $p) {
                     <div class="row g-3">
                         <div class="col-12"><label class="form-label">Nama Gereja <span class="text-danger">*</span></label><input type="text" name="nama_gereja" class="form-control" required></div>
                         <div class="col-12"><label class="form-label">Alamat</label><textarea name="alamat" class="form-control" rows="2"></textarea></div>
-                        <div class="col-6"><label class="form-label">Provinsi</label>
+                        <div class="col-12 col-sm-6"><label class="form-label">Provinsi</label>
                             <select name="provinsi" class="form-select add-select" id="addProvinsi">
                                 <option value="">-- Pilih Provinsi --</option>
                                 <?php foreach ($provinces as $p): ?>
@@ -199,25 +199,25 @@ foreach ($provinces as $p) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-6"><label class="form-label">Kabupaten/Kota</label>
+                        <div class="col-12 col-sm-6"><label class="form-label">Kabupaten/Kota</label>
                             <select name="kabupaten_kota" class="form-select add-select" id="addKabupaten" disabled>
                                 <option value="">-- Pilih Provinsi dulu --</option>
                             </select>
                         </div>
-                        <div class="col-6"><label class="form-label">Kecamatan</label>
+                        <div class="col-12 col-sm-6"><label class="form-label">Kecamatan</label>
                             <select name="kecamatan" class="form-select add-select" id="addKecamatan" disabled>
                                 <option value="">-- Pilih Kabupaten dulu --</option>
                             </select>
                         </div>
-                        <div class="col-6"><label class="form-label">Kelurahan</label>
+                        <div class="col-12 col-sm-6"><label class="form-label">Kelurahan</label>
                             <select name="kelurahan" class="form-select add-select" id="addKelurahan" disabled>
                                 <option value="">-- Pilih Kecamatan dulu --</option>
                             </select>
                         </div>
                         <div class="col-12"><label class="form-label">Link Google Maps</label><input type="text" name="link_maps" class="form-control" id="addLinkMaps" placeholder="https://maps.google.com/?q=-6.168154,106.833206" oninput="extractLatLng('add')"></div>
-                        <div class="col-6"><label class="form-label">Latitude</label><input type="text" name="latitude" class="form-control" id="addLatitude" placeholder="-6.16815400"></div>
-                        <div class="col-6"><label class="form-label">Longitude</label><input type="text" name="longitude" class="form-control" id="addLongitude" placeholder="106.83320600"></div>
-                        <div class="col-6"><label class="form-label">Kontak Telepon</label><input type="text" name="kontak_telepon" class="form-control"></div>
+                        <div class="col-12 col-sm-6"><label class="form-label">Latitude</label><input type="text" name="latitude" class="form-control" id="addLatitude" placeholder="-6.16815400"></div>
+                        <div class="col-12 col-sm-6"><label class="form-label">Longitude</label><input type="text" name="longitude" class="form-control" id="addLongitude" placeholder="106.83320600"></div>
+                        <div class="col-12 col-sm-6"><label class="form-label">Kontak Telepon</label><input type="text" name="kontak_telepon" class="form-control"></div>
                         <div class="col-12"><label class="form-label">Deskripsi</label><textarea name="deskripsi" class="form-control" rows="3"></textarea></div>
                         <div class="col-12">
                             <label class="form-label">Foto Gereja (URL)</label>
@@ -429,14 +429,14 @@ function editGereja(id) {
         var html = '<div class="row g-3">';
         html += '<div class="col-12"><label class="form-label">Nama Gereja</label><input type="text" name="nama_gereja" class="form-control" value="' + escHtml(d.nama_gereja) + '" required></div>';
         html += '<div class="col-12"><label class="form-label">Alamat</label><textarea name="alamat" class="form-control" rows="2">' + escHtml(d.alamat) + '</textarea></div>';
-        html += '<div class="col-6"><label class="form-label">Provinsi</label><select name="provinsi" class="form-select edit-select" id="editProvinsi">' + provOpts + '</select></div>';
-        html += '<div class="col-6"><label class="form-label">Kabupaten/Kota</label><select name="kabupaten_kota" class="form-select edit-select" id="editKabupaten" disabled><option value="">-- Pilih Provinsi dulu --</option></select></div>';
-        html += '<div class="col-6"><label class="form-label">Kecamatan</label><select name="kecamatan" class="form-select edit-select" id="editKecamatan" disabled><option value="">-- Pilih Kabupaten dulu --</option></select></div>';
-        html += '<div class="col-6"><label class="form-label">Kelurahan</label><select name="kelurahan" class="form-select edit-select" id="editKelurahan" disabled><option value="">-- Pilih Kecamatan dulu --</option></select></div>';
+        html += '<div class="col-12 col-sm-6"><label class="form-label">Provinsi</label><select name="provinsi" class="form-select edit-select" id="editProvinsi">' + provOpts + '</select></div>';
+        html += '<div class="col-12 col-sm-6"><label class="form-label">Kabupaten/Kota</label><select name="kabupaten_kota" class="form-select edit-select" id="editKabupaten" disabled><option value="">-- Pilih Provinsi dulu --</option></select></div>';
+        html += '<div class="col-12 col-sm-6"><label class="form-label">Kecamatan</label><select name="kecamatan" class="form-select edit-select" id="editKecamatan" disabled><option value="">-- Pilih Kabupaten dulu --</option></select></div>';
+        html += '<div class="col-12 col-sm-6"><label class="form-label">Kelurahan</label><select name="kelurahan" class="form-select edit-select" id="editKelurahan" disabled><option value="">-- Pilih Kecamatan dulu --</option></select></div>';
         html += '<div class="col-12"><label class="form-label">Link Google Maps</label><input type="text" name="link_maps" class="form-control" id="editLinkMaps" value="' + escHtml(d.link_maps) + '" oninput="extractLatLng(\'edit\')"></div>';
-        html += '<div class="col-6"><label class="form-label">Latitude</label><input type="text" name="latitude" class="form-control" id="editLatitude" value="' + d.latitude + '"></div>';
-        html += '<div class="col-6"><label class="form-label">Longitude</label><input type="text" name="longitude" class="form-control" id="editLongitude" value="' + d.longitude + '"></div>';
-        html += '<div class="col-6"><label class="form-label">Kontak Telepon</label><input type="text" name="kontak_telepon" class="form-control" value="' + escHtml(d.kontak_telepon) + '"></div>';
+        html += '<div class="col-12 col-sm-6"><label class="form-label">Latitude</label><input type="text" name="latitude" class="form-control" id="editLatitude" value="' + d.latitude + '"></div>';
+        html += '<div class="col-12 col-sm-6"><label class="form-label">Longitude</label><input type="text" name="longitude" class="form-control" id="editLongitude" value="' + d.longitude + '"></div>';
+        html += '<div class="col-12 col-sm-6"><label class="form-label">Kontak Telepon</label><input type="text" name="kontak_telepon" class="form-control" value="' + escHtml(d.kontak_telepon) + '"></div>';
         html += '<div class="col-12"><label class="form-label">Deskripsi</label><textarea name="deskripsi" class="form-control" rows="3">' + escHtml(d.deskripsi) + '</textarea></div>';
         html += '<div class="col-12"><label class="form-label">Foto Gereja (URL)</label><div id="editFotoList">' + fotoHtml + '</div>';
         html += '<button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="tambahFoto(\'editFotoList\')"><i class="bx bx-plus me-1"></i>Tambah Foto</button></div>';

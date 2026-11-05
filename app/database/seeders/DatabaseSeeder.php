@@ -3,8 +3,8 @@
 function run_database_seeder() {
     $seeders = array(
         // 'AdminSeeder',
-        'GerejaSeeder',
-        'JadwalMisaSeeder',
+        // 'GerejaSeeder',
+        // 'JadwalMisaSeeder',
         'WilayahSeeder',
     );
 

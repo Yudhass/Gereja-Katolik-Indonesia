@@ -70,7 +70,18 @@ function run_gereja_seeder() {
         ),
     );
 
+    // Muat slug yang sudah ada di DB agar tidak duplikat
     $existingSlugs = array();
+    try {
+        $res = $db->query("SELECT slug FROM gereja");
+        if ($res) {
+            while ($r = $res->fetch(PDO::FETCH_ASSOC)) {
+                if (isset($r['slug']) && $r['slug'] !== '') $existingSlugs[] = $r['slug'];
+            }
+        }
+    } catch (Exception $e) { /* ignore */ }
+
+    $inserted = 0;
     foreach ($data as $item) {
         if (!isset($item['slug']) || empty($item['slug'])) {
             $base = _slugify($item['nama_gereja']);
@@ -85,12 +96,17 @@ function run_gereja_seeder() {
         $existingSlugs[] = $item['slug'];
         $columns = implode(', ', array_keys($item));
         $placeholders = ':' . implode(', :', array_keys($item));
-        $sql = "INSERT INTO gereja ({$columns}) VALUES ({$placeholders})";
+        $sql = "INSERT IGNORE INTO gereja ({$columns}) VALUES ({$placeholders})";
         $stmt = $db->prepare($sql);
-        $stmt->execute($item);
+        try {
+            $stmt->execute($item);
+            if ($stmt->rowCount() > 0) $inserted++;
+        } catch (Exception $e) {
+            // skip duplikat / error per baris
+        }
     }
 
-    return count($data);
+    return $inserted;
 }
 
 return 'run_gereja_seeder';

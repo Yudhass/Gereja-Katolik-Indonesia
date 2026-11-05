@@ -5,10 +5,10 @@
             <div class="top-menu ms-auto">
                 <ul class="navbar-nav align-items-center gap-1"></ul>
             </div>
-            <div class="user-box dropdown px-3">
-                <a class="d-flex align-items-center nav-link dropdown-toggle gap-3 dropdown-toggle-nocaret" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="user-box dropdown px-2 px-md-3">
+                <a class="d-flex align-items-center nav-link dropdown-toggle gap-2 gap-md-3 dropdown-toggle-nocaret" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bx bx-user-circle" style="font-size:2rem; color:#2C4463;"></i>
-                    <div class="user-info">
+                    <div class="user-info d-none d-sm-block">
                         <p class="user-name mb-0"><?= Auth()->nama; ?></p>
                         <p class="designation mb-0"><?= ucfirst(Auth()->role_nama); ?></p>
                     </div>

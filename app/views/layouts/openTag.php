@@ -21,7 +21,9 @@
     <!-- Bootstrap CSS -->
     <link href="<?= BASEURL; ?>assets/css/bootstrap.min.css" rel="stylesheet">
     <link href="<?= BASEURL; ?>assets/css/bootstrap-extended.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <link href="<?= BASEURL; ?>assets/sass/app.css" rel="stylesheet">
     <link href="<?= BASEURL; ?>assets/css/icons.css" rel="stylesheet">
@@ -30,7 +32,7 @@
     <link rel="stylesheet" href="<?= BASEURL; ?>assets/sass/dark-theme.css">
     <link rel="stylesheet" href="<?= BASEURL; ?>assets/sass/semi-dark.css">
     <link rel="stylesheet" href="<?= BASEURL; ?>assets/sass/bordered-theme.css">
-    <link href="<?= BASEURL; ?>assets/css/admin.css" rel="stylesheet">
+    <link href="<?= BASEURL; ?>assets/css/admin.css?v=20261105b" rel="stylesheet">
     <title>Info Gereja - <?= $title; ?></title>
     <?php if (isset($css)): ?>
         <?php foreach ($css as $csss): ?>

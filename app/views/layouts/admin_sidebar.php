@@ -1,8 +1,10 @@
 <div class="sidebar-wrapper" data-simplebar="true">
     <div class="sidebar-header">
-        <div><img src="<?= BASEURL; ?>assets/images/logo/logo.webp" class="logo-icon" alt="logo" style="max-height:2.5rem; width:auto;"></div>
-        <div><h4 class="logo-text">Info Gereja</h4></div>
-        <div class="mobile-toggle-icon ms-auto"><i class='bx bx-x'></i></div>
+        <div class="d-flex align-items-center gap-2">
+            <img src="<?= BASEURL; ?>assets/images/logo/logo.webp" class="logo-icon" alt="logo" style="max-height:2.25rem; width:auto;">
+            <span class="logo-text mb-0" style="color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;font-size:1.25rem;font-weight:700;line-height:1;display:inline-block;">Info Gereja</span>
+        </div>
+        <div class="mobile-toggle-icon ms-auto" style="color:#ffffff !important;"><i class='bx bx-x'></i></div>
     </div>
     <ul class="metismenu" id="menu">
         <li class="<?= isset($sidebar) && $sidebar == 'dashboard' ? 'mm-active' : ''; ?>">
@@ -36,3 +38,4 @@
         </li>
     </ul>
 </div>
+<div class="overlay"></div>

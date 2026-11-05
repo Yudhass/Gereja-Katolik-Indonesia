@@ -39,6 +39,17 @@
         <?php endif; ?>
     });
 </script>
+<script>
+    $(document).on('click', '.overlay', function () {
+        $('.wrapper').removeClass('toggled');
+    });
+    // close sidebar when a menu link is clicked on mobile
+    $(document).on('click', '.sidebar-wrapper .metismenu a', function () {
+        if (window.innerWidth <= 1024) {
+            $('.wrapper').removeClass('toggled');
+        }
+    });
+</script>
 <!--app JS-->
 <script src="<?= BASEURL; ?>assets/js/app.js"></script>
 </body>

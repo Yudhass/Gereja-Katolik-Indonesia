@@ -11,7 +11,7 @@ function run_admin_seeder() {
 
     $data = array(
         array(
-            'nama_lengkap' => 'Admin Gereja',
+            'nama_lengkap' => 'Administrator Info Gereja',
             'email' => 'admin.gereja.katolik.indonesia@gmail.com',
             'password_hash' => $passwordHash
         ),

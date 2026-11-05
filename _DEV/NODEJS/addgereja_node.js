@@ -314,6 +314,25 @@ function extractWilayah(alamat) {
   return result;
 }
 
+function extractCoords(link) {
+  const result = { latitude: "", longitude: "" };
+  if (!link) return result;
+  const s = String(link);
+  const patterns = [
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /ll=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /center=(-?\d+(?:\.\d+)?)%2C(-?\d+(?:\.\d+)?)/,
+    /place\/[^/]*\/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+  ];
+  for (const re of patterns) {
+    const m = s.match(re);
+    if (m) { result.latitude = m[1]; result.longitude = m[2]; return result; }
+  }
+  return result;
+}
+
 function getPlatform(website) {
   if (!website) return "website";
   const w = String(website).toLowerCase();
@@ -498,6 +517,7 @@ async function addGerejaViaBackend(row) {
   const nameVal = row[1];
   const addressVal = row.length > 18 ? row[18] : null;
   const linkVal = row.length > 20 ? row[20] : null;
+  const coords = extractCoords(linkVal);
   const phoneVal = row.length > 8 ? row[8] : null;
   const websiteVal = row.length > 7 ? row[7] : null;
 
@@ -518,8 +538,8 @@ async function addGerejaViaBackend(row) {
   params.append('kecamatan', wilayah.kecamatan || '');
   params.append('kelurahan', wilayah.kelurahan || '');
   params.append('link_maps', linkVal ? String(linkVal) : '');
-  params.append('latitude', '');
-  params.append('longitude', '');
+  params.append('latitude', coords.latitude || '');
+  params.append('longitude', coords.longitude || '');
   params.append('kontak_telepon', phoneVal ? String(phoneVal) : '');
   params.append('deskripsi', '');
   if (websiteVal) {
@@ -551,8 +571,13 @@ async function addGerejaViaBackend(row) {
 
   const lower = (finalHtml || '').toLowerCase();
   const alreadyExists = lower.includes('sudah ada di database');
-  const success = !alreadyExists && (lower.includes('alert-success') || lower.includes('berhasil ditambahkan'));
-  return { alreadyExists, success, status: res.status, wilayah };
+  // POST /admin/gereja/add mengembalikan 302 redirect:
+  //   sukses  -> Location: .../admin/gereja
+  //   gagal   -> Location: .../admin/gereja/add (redirectBack) atau /login
+  const locLower = String(loc || '').toLowerCase();
+  const redirectedToIndex = /admin\/gereja(\?|$)/.test(locLower) && !/admin\/gereja\/add/.test(locLower);
+  const success = !alreadyExists && (redirectedToIndex || lower.includes('alert-success') || lower.includes('berhasil ditambahkan') || lower.includes('gereja berhasil'));
+  return { alreadyExists, success, status: res.status, wilayah, redirect: loc };
 }
 
 // ---------------------------------------------------------------------------
@@ -637,8 +662,10 @@ async function runAutomation(opts) {
       }
 
       const addressVal = row.length > 18 ? row[18] : null;
+      const linkVal = row.length > 20 ? row[20] : null;
       const wilayah = extractWilayah(addressVal ? String(addressVal) : "");
-      console.log(`  ${S.dot} ${col("Wilayah",C.dim)} ${col(JSON.stringify(wilayah), C.cyan)}`);
+      const coords = extractCoords(linkVal);
+      console.log(`  ${S.dot} ${col("Wilayah",C.dim)} ${col(JSON.stringify(wilayah), C.cyan)} ${S.dot} ${col("Koordinat",C.dim)} ${col(coords.latitude + "," + coords.longitude, C.cyan)}`);
 
       try {
         const result = await addGerejaViaBackend(row);
@@ -664,14 +691,18 @@ async function runAutomation(opts) {
           globalBerhasil++;
         } else {
           globalGagal++;
-          console.log(`  ${S.fail} ${badge("GAGAL", C.bgRed)} ${col(truncate(nameVal,48),C.white)} ${col("status="+result.status,C.red)}`);
+          const prov = (wilayah && wilayah.provinsi) ? wilayah.provinsi : "-";
+          if (!inLog) writeLog(nameVal, `GAGAL (provinsi: ${prov})`);
+          console.log(`  ${S.fail} ${badge("GAGAL", C.bgRed)} ${col(truncate(nameVal,48),C.white)} ${col("status="+result.status,C.red)} ${col("redirect="+ (result.redirect||'-'), C.dim)} ${col("provinsi="+prov, C.dim)}`);
         }
         const elapsed = ((Date.now()-startedAt)/1000).toFixed(1);
         console.log(`  ${col("▸ Progress",C.bold)} ${bar(globalIdx, totalRows)} ${S.dot} ${col(`berhasil: ${globalBerhasil}`,C.green+C.bold)} ${S.dot} ${col(`gagal: ${globalGagal}`,C.dim)} ${S.dot} ${col(fmtTime(elapsed), C.cyan)}`);
       } catch (e) {
         globalGagal++;
+        const prov = (wilayah && wilayah.provinsi) ? wilayah.provinsi : "-";
+        if (!inLog) writeLog(nameVal, `ERROR (provinsi: ${prov}) ${e.message}`);
         console.log(`\n  ${col("✘ ERROR", C.bgRed+C.white+C.bold)} ${col(truncate(nameVal,52),C.white)}`);
-        console.log(`  ${S.dot} ${col(e.message, C.red)}`);
+        console.log(`  ${S.dot} ${col(e.message, C.red)} ${col("provinsi="+prov, C.dim)}`);
       }
     }
     const fileElapsed = ((Date.now()-startedAt)/1000).toFixed(1);

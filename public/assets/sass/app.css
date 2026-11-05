@@ -63,10 +63,10 @@ a {
   margin-left: 10px;
   margin-bottom: 0;
   letter-spacing: 1px;
-  color: #1e614f;
+  color: #ffffff !important;
 }
 .sidebar-wrapper .sidebar-header .mobile-toggle-icon {
-  color: #1e614f;
+  color: #ffffff !important;
   font-size: 22px;
   border-radius: 50%;
   display: flex;

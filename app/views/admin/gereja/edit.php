@@ -60,7 +60,7 @@ foreach ($provinces as $p) {
                                 <label class="form-label">Alamat</label>
                                 <textarea name="alamat" class="form-control" rows="2"><?= htmlspecialchars($gereja->alamat); ?></textarea>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12 col-sm-6">
                                 <label class="form-label">Provinsi</label>
                                 <select name="provinsi" class="form-select edit-select" id="editProvinsi">
                                     <option value="">-- Pilih Provinsi --</option>
@@ -69,19 +69,19 @@ foreach ($provinces as $p) {
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12 col-sm-6">
                                 <label class="form-label">Kabupaten/Kota</label>
                                 <select name="kabupaten_kota" class="form-select edit-select" id="editKabupaten" disabled>
                                     <option value="">-- Pilih Provinsi dulu --</option>
                                 </select>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12 col-sm-6">
                                 <label class="form-label">Kecamatan</label>
                                 <select name="kecamatan" class="form-select edit-select" id="editKecamatan" disabled>
                                     <option value="">-- Pilih Kabupaten dulu --</option>
                                 </select>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12 col-sm-6">
                                 <label class="form-label">Kelurahan</label>
                                 <select name="kelurahan" class="form-select edit-select" id="editKelurahan" disabled>
                                     <option value="">-- Pilih Kecamatan dulu --</option>
@@ -91,15 +91,15 @@ foreach ($provinces as $p) {
                                 <label class="form-label">Link Google Maps</label>
                                 <input type="text" name="link_maps" class="form-control" id="editLinkMaps" value="<?= htmlspecialchars($gereja->link_maps); ?>" placeholder="https://maps.google.com/?q=-6.168154,106.833206" oninput="extractLatLng('edit')">
                             </div>
-                            <div class="col-6">
+                            <div class="col-12 col-sm-6">
                                 <label class="form-label">Latitude</label>
                                 <input type="text" name="latitude" class="form-control" id="editLatitude" value="<?= htmlspecialchars($gereja->latitude); ?>" placeholder="-6.16815400">
                             </div>
-                            <div class="col-6">
+                            <div class="col-12 col-sm-6">
                                 <label class="form-label">Longitude</label>
                                 <input type="text" name="longitude" class="form-control" id="editLongitude" value="<?= htmlspecialchars($gereja->longitude); ?>" placeholder="106.83320600">
                             </div>
-                            <div class="col-6">
+                            <div class="col-12 col-sm-6">
                                 <label class="form-label">Kontak Telepon</label>
                                 <input type="text" name="kontak_telepon" class="form-control" value="<?= htmlspecialchars($gereja->kontak_telepon); ?>">
                             </div>

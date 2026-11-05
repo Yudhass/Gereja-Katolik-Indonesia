@@ -5,7 +5,7 @@ function str_getcsv_compat($input, $delimiter = ';')
     $fh = fopen('php://temp', 'r+');
     fwrite($fh, $input);
     rewind($fh);
-    $result = fgetcsv($fh, 0, $delimiter);
+    $result = fgetcsv($fh, 0, $delimiter, '"', '');
     fclose($fh);
     return $result;
 }
