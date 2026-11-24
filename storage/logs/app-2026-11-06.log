@@ -1,0 +1,240 @@
+[2026-11-06 06:49:39] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'kontak_telepon' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:49:44] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'kontak_telepon' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:49:50] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'link_maps' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:49:51] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'kontak_telepon' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:55:57] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'kontak_telepon' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:56:03] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'kontak_telepon' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:56:08] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'link_maps' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:56:10] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'kontak_telepon' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:56:31] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'kontak_telepon' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:56:39] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'link_maps' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:56:41] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'kontak_telepon' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:56:57] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'link_maps' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:56:58] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'kontak_telepon' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:57:00] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'link_maps' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:57:02] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'kontak_telepon' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:57:31] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'link_maps' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:57:32] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'kontak_telepon' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:57:35] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'kontak_telepon' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:57:37] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'link_maps' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
+[2026-11-06 06:57:39] [ERROR] SQLSTATE[22001]: String data, right truncated: 1406 Data too long for column 'kontak_telepon' at row 1 | File: C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php:255 | Context: Array
+(
+    [exception_class] => PDOException
+    [file] => C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php
+    [line] => 66
+    [trace] => #0 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\Model.php(66): PDOStatement->execute(Array)
+#1 C:\laragon\www\Gereja-Katolik-Indonesia\app\controllers\AdminGerejaController.php(162): Model->insert(Array)
+#2 C:\laragon\www\Gereja-Katolik-Indonesia\app\core\App.php(238): AdminGerejaController->add()
+#3 C:\laragon\www\Gereja-Katolik-Indonesia\public\index.php(11): App->run()
+#4 {main}
+)
+
