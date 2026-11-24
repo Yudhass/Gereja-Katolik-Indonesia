@@ -2,6 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Gereja Cleaner - Data Wilayah Kosong</title>
 <link rel="stylesheet" href="styles.css" />
@@ -30,7 +31,7 @@
     <label>User<input id="dbUser" value="root" /></label>
     <label>Password<input id="dbPass" type="password" placeholder="(kosong)" /></label>
     <label>Database<input id="dbName" value="db_gereja" /></label>
-    <label class="wide">Base URL edit<input id="baseUrl" value="http://192.168.1.240/Gereja-Katolik-Indonesia/admin/gereja/edit/" /></label>
+    <label class="wide">Base URL edit<input id="baseUrl" value="http://localhost/Gereja-Katolik-Indonesia/admin/gereja/edit/" /></label>
   </div>
   <div class="cfg-actions">
     <button id="btnTest" class="btn ghost">🔌 Tes Koneksi</button>
@@ -48,8 +49,8 @@
       <option value="kabupaten_kota">Kab/Kota kosong</option>
       <option value="kecamatan">Kecamatan kosong</option>
       <option value="kelurahan">Kelurahan kosong</option>
-      <option value="alamat_tidak_lengkap">Alamat bertanda (S)</option>
-      <option value="alamat_tanpa_tanda_s">Alamat tanpa tanda (S)</option>
+      <option value="alamat_tidak_lengkap">Alamat kosong / bertanda (S)</option>
+      <option value="alamat_tanpa_tanda_s">Alamat lengkap (tanpa (S))</option>
     </select>
     <select id="perPage">
       <option value="25">25 / halaman</option>
@@ -103,7 +104,7 @@
 </main>
 
 <footer class="foot dim">
-  <span>URL dibuka: <code id="urlPreview">http://192.168.1.240/Gereja-Katolik-Indonesia/admin/gereja/edit/{id}</code></span>
+  <span>URL dibuka: <code id="urlPreview">http://localhost/Gereja-Katolik-Indonesia/admin/gereja/edit/{id}</code></span>
   <span id="toast" class="toast"></span>
 </footer>
 

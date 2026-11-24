@@ -4,49 +4,195 @@ foreach ($provinces as $p) {
     $provArr[] = array('id' => $p->id, 'name' => $p->name);
 }
 ?>
-<?php $this->view('layouts/openTag', array('title' => $title, 'css' => array('assets/plugins/datatable/css/dataTables.bootstrap5.min.css'), 'css2' => array('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'))); ?>
+<?php $this->view('layouts/openTag', array(
+    'title' => $title,
+    'css' => array('assets/plugins/datatable/css/dataTables.bootstrap5.min.css'),
+    'css2' => array('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css')
+)); ?>
 <style>
-    .btn-custom-primary { background:#fff; border:2px solid #2C4463; color:#2C4463 !important; font-weight:600; }
-    .btn-custom-primary:hover { background:rgba(44,68,99,0.08); border-color:#1A2D47; color:#1A2D47 !important; }
-    .btn-custom-outline { color:#2C4463; border-color:#2C4463; }
-    .btn-custom-outline:hover { background:#2C4463; color:#fff; }
-    .foto-list img { width:40px; height:30px; object-fit:cover; border-radius:4px; margin-right:2px; }
-    @media (max-width:576px) {
-        .foto-input-group { flex-wrap: wrap; }
-        .foto-input-group input[type="url"] { min-width: 160px; }
+    .gereja-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.25rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--gki-border);
     }
-    .foto-input-group { display:flex; gap:0.5rem; margin-bottom:0.5rem; align-items:center; }
-    .foto-input-group input[type="url"] { flex:1; }
-    .foto-input-group input[type="text"] { width:150px; }
-    .select2-container--default .select2-selection--single {
-        border-radius: 8px !important;
-        border: 1px solid #dee2e6 !important;
-        min-height: 38px;
+    .gereja-title-row {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        flex-wrap: wrap;
     }
-    .select2-container--default .select2-selection--single .select2-selection__rendered {
-        line-height: 38px !important;
+    .gereja-title {
+        font-size: clamp(1.25rem, 1.05rem + 0.6vw, 1.55rem);
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: var(--gki-text);
+        margin: 0;
     }
-    .select2-container--default .select2-selection--single .select2-selection__arrow {
-        height: 36px !important;
+    .gereja-count-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.22rem 0.65rem;
+        border-radius: 999px;
+        background: var(--gki-primary-light);
+        color: var(--gki-primary);
+        font-size: 0.78rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
     }
-    .select2-container--default .select2-search--dropdown .select2-search__field:focus {
-        border-color: var(--gki-primary) !important;
-        box-shadow: 0 0 0 0.2rem rgba(44, 68, 99, 0.12) !important;
+    .gereja-subtitle {
+        font-size: 0.85rem;
+        color: var(--gki-muted);
+        margin: 0.2rem 0 0;
     }
-    .filter-sm .select2-selection--single {
-        min-height: 31px !important;
+
+    .filter-panel {
+        background: var(--gki-surface);
+        border: 1px solid var(--gki-border);
+        border-radius: 14px;
+        padding: 1rem 1.15rem;
+        margin-bottom: 1.15rem;
     }
-    .filter-sm .select2-selection--single .select2-selection__rendered {
-        line-height: 29px !important;
-        font-size: 0.875rem !important;
+    .filter-panel .form-label {
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: var(--gki-muted);
+        margin-bottom: 0.3rem;
     }
-    .filter-sm .select2-selection--single .select2-selection__arrow {
-        height: 29px !important;
+
+    .table-panel {
+        background: var(--gki-surface);
+        border: 1px solid var(--gki-border);
+        border-radius: 14px;
+        padding: 1rem 1.15rem;
     }
-    .form-control-sm.match-select2 {
-        height: 31px;
-        border-radius: 8px;
-        font-size: 0.875rem;
+    #table-gereja thead th {
+        background: var(--gki-bg) !important;
+        color: var(--gki-muted) !important;
+        border-bottom: 1px solid var(--gki-border) !important;
+        font-size: 0.73rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.7rem 0.85rem;
+    }
+    #table-gereja tbody td {
+        padding: 0.8rem 0.85rem;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--gki-bg);
+        font-size: 0.85rem;
+    }
+    .cell-church-name {
+        font-weight: 700;
+        color: var(--gki-text);
+        line-height: 1.35;
+    }
+    .cell-church-addr {
+        font-size: 0.78rem;
+        color: var(--gki-muted);
+        margin-top: 0.15rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        max-width: 340px;
+    }
+    .cell-region-main {
+        font-weight: 600;
+        color: var(--gki-text);
+        font-size: 0.83rem;
+    }
+    .cell-region-sub {
+        font-size: 0.76rem;
+        color: var(--gki-muted);
+        margin-top: 0.12rem;
+    }
+    .cell-region-empty {
+        display: inline-block;
+        padding: 0.12rem 0.45rem;
+        border-radius: 999px;
+        background: #FEF3C7;
+        color: #92400E;
+        font-size: 0.72rem;
+        font-weight: 600;
+    }
+    .cell-contact-phone {
+        font-size: 0.82rem;
+        color: var(--gki-text);
+        font-variant-numeric: tabular-nums;
+    }
+    .cell-links {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        flex-wrap: wrap;
+        margin-top: 0.25rem;
+    }
+    .cell-icon-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        background: var(--gki-bg);
+        color: var(--gki-primary);
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: background-color 0.14s ease, color 0.14s ease;
+    }
+    .cell-icon-link:hover {
+        background: var(--gki-primary-light);
+        color: var(--gki-primary-hover);
+    }
+    .cell-thumbs {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .cell-thumbs img {
+        width: 40px;
+        height: 30px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid var(--gki-border);
+    }
+    .cell-thumb-more {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 26px;
+        height: 24px;
+        padding: 0 5px;
+        border-radius: 6px;
+        background: var(--gki-primary-light);
+        color: var(--gki-primary);
+        font-size: 0.72rem;
+        font-weight: 700;
+    }
+    .dataTables_wrapper .dataTables_processing {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid var(--gki-border);
+        border-radius: 10px;
+        color: var(--gki-primary);
+        font-weight: 600;
+        font-size: 0.85rem;
+        box-shadow: var(--gki-shadow);
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button.active .page-link,
+    .dataTables_wrapper .page-item.active .page-link {
+        background-color: var(--gki-primary);
+        border-color: var(--gki-primary);
+        color: #fff;
+    }
+    .dataTables_wrapper .page-link {
+        color: var(--gki-text);
+        border-color: var(--gki-border);
+        font-size: 0.82rem;
     }
 </style>
 <body>
@@ -55,125 +201,62 @@ foreach ($provinces as $p) {
     <?php $this->view('layouts/navbar'); ?>
     <div class="page-wrapper">
         <div class="page-content">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bx bx-church" style="color:#2C4463; font-size:1.3rem;"></i>
-                    <h5 class="mb-0 fw-bold">Data Gereja</h5>
+            <div class="gereja-header">
+                <div>
+                    <div class="gereja-title-row">
+                        <h1 class="gereja-title">Data Gereja</h1>
+                        <span class="gereja-count-badge" id="totalGerejaBadge"><?= number_format((int)$totalGereja, 0, ',', '.'); ?> gereja</span>
+                    </div>
+                    <p class="gereja-subtitle">Kelola direktori gereja, wilayah, foto, dan tautan lokasi secara server-side.</p>
                 </div>
                 <button type="button" class="btn btn-custom-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAdd">
-                    <i class="bx bx-plus me-1"></i>Tambah Gereja
+                    <i class="bx bx-plus me-1" aria-hidden="true"></i>Tambah Gereja
                 </button>
             </div>
 
-            <div class="card mb-3">
-                <div class="card-body py-2">
-                    <form method="GET" action="<?= BASEURL; ?>admin/gereja" class="row g-2 align-items-end">
-                        <div class="col-12 col-md-5">
-                            <label class="form-label small mb-1">Cari</label>
-                            <input type="text" name="q" class="form-control form-control-sm match-select2" placeholder="Nama gereja, alamat, provinsi..." value="<?= htmlspecialchars($filterSearch); ?>">
-                        </div>
-                        <div class="col-6 col-md-4">
-                            <label class="form-label small mb-1">Provinsi</label>
-                            <select name="provinsi" class="form-select form-select-sm" id="filterProvinsi">
-                                <option value="">Semua Provinsi</option>
-                                <?php foreach ($provinces as $p): ?>
-                                <option value="<?= htmlspecialchars($p->name); ?>" <?= $filterProvinsi == $p->name ? 'selected' : ''; ?>><?= htmlspecialchars($p->name); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-6 col-md-3 d-flex gap-2">
-                            <button type="submit" class="btn btn-custom-primary btn-sm flex-fill"><i class="bx bx-filter me-1"></i>Filter</button>
-                            <a href="<?= BASEURL; ?>admin/gereja" class="btn btn-custom-outline btn-sm flex-fill"><i class="bx bx-reset me-1"></i>Reset</a>
-                        </div>
-                    </form>
-                </div>
-            </div>
+            <section class="filter-panel" aria-label="Filter data gereja">
+                <form id="filterGerejaForm" method="GET" action="<?= BASEURL; ?>admin/gereja" class="row g-2 align-items-end">
+                    <div class="col-12 col-md-5">
+                        <label class="form-label" for="filterSearch">Cari Gereja</label>
+                        <input type="text" id="filterSearch" name="q" class="form-control form-control-sm match-select2" placeholder="Nama gereja, alamat, kota, atau telepon..." value="<?= htmlspecialchars($filterSearch); ?>">
+                    </div>
+                    <div class="col-12 col-sm-7 col-md-4">
+                        <label class="form-label" for="filterProvinsi">Provinsi</label>
+                        <select name="provinsi" class="form-select form-select-sm" id="filterProvinsi">
+                            <option value="">Semua Provinsi</option>
+                            <?php foreach ($provinces as $p): ?>
+                            <option value="<?= htmlspecialchars($p->name); ?>" <?= $filterProvinsi == $p->name ? 'selected' : ''; ?>><?= htmlspecialchars($p->name); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-5 col-md-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-custom-primary btn-sm flex-fill">
+                            <i class="bx bx-filter-alt me-1" aria-hidden="true"></i>Terapkan
+                        </button>
+                        <button type="button" id="btnResetFilter" class="btn btn-custom-outline btn-sm flex-fill">
+                            <i class="bx bx-reset me-1" aria-hidden="true"></i>Reset
+                        </button>
+                    </div>
+                </form>
+            </section>
 
-            <div class="card">
-                <div class="card-body">
-                    <div class="table-responsive" style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
-                    <table id="table-gereja" class="table table-hover" style="font-size:0.85rem;width:100%;">
+            <section class="table-panel" aria-label="Tabel data gereja">
+                <div class="table-responsive">
+                    <table id="table-gereja" class="table table-hover mb-0" style="width:100%;">
                         <thead>
                             <tr>
-                                <th style="width:15px;">#</th>
-                                <th style="width:18%;">Nama Gereja</th>
-                                <th style="width:20%;">Alamat</th>
-                                <th>Provinsi</th>
-                                <th>Kabupaten</th>
-                                <th>Kecamatan</th>
-                                <th>Kelurahan</th>
-                                <th style="width:8%;">Kontak</th>
-                                <th style="width:6%;">Foto</th>
-                                <th style="width:8%;">Sosial Media</th>
-                                <th style="width:4%;">Maps</th>
-                                <th style="width:8%;">Aksi</th>
+                                <th style="width:44px;">#</th>
+                                <th>Gereja &amp; Alamat</th>
+                                <th>Wilayah</th>
+                                <th>Kontak &amp; Tautan</th>
+                                <th style="width:120px;">Foto</th>
+                                <th style="width:100px;" class="text-end">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <?php $no=1; foreach ($gerejaList as $g): ?>
-                            <tr>
-                                <td style="width:15px;text-align:center;padding-left:2px;padding-right:2px;"><?= $no++; ?></td>
-                                <td class="fw-bold" style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->nama_gereja); ?></td>
-                                <td style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->alamat ? $g->alamat : '-'); ?></td>
-                                <td style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->provinsi ? $g->provinsi : '-'); ?></td>
-                                <td style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->kabupaten_kota ? $g->kabupaten_kota : '-'); ?></td>
-                                <td style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->kecamatan ? $g->kecamatan : '-'); ?></td>
-                                <td style="white-space:normal;word-break:break-word;"><?= htmlspecialchars($g->kelurahan ? $g->kelurahan : '-'); ?></td>
-                                <td><?= htmlspecialchars($g->kontak_telepon ? $g->kontak_telepon : '-'); ?></td>
-                                <td>
-                                    <?php if (!empty($g->foto_list)): ?>
-                                    <div class="foto-list">
-                                    <?php foreach ($g->foto_list as $f): ?>
-                                        <img src="<?= htmlspecialchars($f->foto_url); ?>" alt="" title="<?= htmlspecialchars($f->keterangan); ?>">
-                                    <?php endforeach; ?>
-                                    </div>
-                                    <?php else: ?>
-                                    -
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if (!empty($g->social_media_list)): ?>
-                                    <div class="d-flex gap-1 flex-wrap">
-                                    <?php foreach ($g->social_media_list as $sm): ?>
-                                        <a href="<?= htmlspecialchars($sm->url); ?>" target="_blank" class="btn btn-sm px-1 py-0" style="border:none;font-size:1.1rem;" title="<?= htmlspecialchars(ucfirst($sm->platform)); ?>">
-                                            <?php if ($sm->platform == 'website'): ?><i class="bx bx-globe" style="color:#2C4463;"></i>
-                                            <?php elseif ($sm->platform == 'instagram'): ?><i class="bx bxl-instagram" style="color:#E4405F;"></i>
-                                            <?php elseif ($sm->platform == 'facebook'): ?><i class="bx bxl-facebook" style="color:#1877F2;"></i>
-                                            <?php elseif ($sm->platform == 'twitter'): ?><i class="bx bxl-twitter" style="color:#1DA1F2;"></i>
-                                            <?php elseif ($sm->platform == 'youtube'): ?><i class="bx bxl-youtube" style="color:#FF0000;"></i>
-                                            <?php elseif ($sm->platform == 'tiktok'): ?><i class="bx bxl-tiktok" style="color:#000;"></i>
-                                            <?php elseif ($sm->platform == 'linkedin'): ?><i class="bx bxl-linkedin" style="color:#0A66C2;"></i>
-                                            <?php elseif ($sm->platform == 'whatsapp'): ?><i class="bx bxl-whatsapp" style="color:#25D366;"></i>
-                                            <?php elseif ($sm->platform == 'telegram'): ?><i class="bx bxl-telegram" style="color:#0088CC;"></i>
-                                            <?php else: ?><i class="bx bx-link" style="color:#2C4463;"></i>
-                                            <?php endif; ?>
-                                        </a>
-                                    <?php endforeach; ?>
-                                    </div>
-                                    <?php else: ?>
-                                    -
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-center">
-                                    <?php if (!empty($g->link_maps)): ?>
-                                    <a href="<?= htmlspecialchars($g->link_maps); ?>" target="_blank" class="btn btn-sm px-1 py-0" style="border:none;font-size:1.3rem;" title="Buka Google Maps">
-                                        <i class="bx bx-globe" style="color:#2C4463;"></i>
-                                    </a>
-                                    <?php else: ?>
-                                    -
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-nowrap">
-                                    <a href="<?= BASEURL; ?>admin/gereja/edit/<?= $g->id; ?>?q=<?= urlencode($filterSearch); ?>&provinsi=<?= urlencode($filterProvinsi); ?>" class="btn btn-sm btn-custom-outline"><i class="bx bx-edit"></i></a>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="hapusGereja(<?= $g->id; ?>)"><i class="bx bx-trash"></i></button>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
+                        <tbody></tbody>
                     </table>
-                    </div>
                 </div>
-            </div>
+            </section>
         </div>
     </div>
 </div>
@@ -183,7 +266,7 @@ foreach ($provinces as $p) {
         <div class="modal-content">
             <form method="POST" action="<?= BASEURL; ?>admin/gereja/add">
                 <?= csrf_field(); ?>
-                <div class="modal-header" style="background:#2C4463; color:#fff;">
+                <div class="modal-header">
                     <h5 class="modal-title"><i class="bx bx-plus-circle me-1"></i>Tambah Gereja</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -260,31 +343,13 @@ foreach ($provinces as $p) {
     </div>
 </div>
 
-<div class="modal fade" id="modalEdit" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <form method="POST" action="" id="formEdit">
-                <?= csrf_field(); ?>
-                <div class="modal-header" style="background:#2C4463; color:#fff;">
-                    <h5 class="modal-title"><i class="bx bx-edit me-1"></i>Edit Gereja</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="editBody"></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bx bx-x me-1"></i>Batal</button>
-                    <button type="submit" class="btn btn-custom-primary"><i class="bx bx-save me-1"></i>Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <script>
 var provinsiData = <?php echo json_encode($provArr); ?>;
+var dtGereja = null;
 
 function escHtml(s) {
-    if (!s) return '';
-    return $('<div>').text(s).html();
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function getSelectedDataId(selectId) {
@@ -338,7 +403,6 @@ function extractLatLng(prefix) {
     var lat = null, lng = null;
     if (!url) return;
 
-    // 1. !3d / !4d = actual pin coordinates (take last occurrence)
     var lat3d = url.match(/!3d(-?\d+\.?\d*)/g);
     var lng4d = url.match(/!4d(-?\d+\.?\d*)/g);
     if (lat3d && lng4d && lat3d.length > 0 && lng4d.length > 0) {
@@ -346,14 +410,8 @@ function extractLatLng(prefix) {
         lat = lat3d[li].replace('!3d', '');
         lng = lng4d[li].replace('!4d', '');
     }
-
-    // 2. @lat,lng = viewport center
     if (!lat) { var m = url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/); if (m) { lat = m[1]; lng = m[2]; } }
-
-    // 3. ?q=lat,lng
     if (!lat) { var m = url.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/); if (m) { lat = m[1]; lng = m[2]; } }
-
-    // 4. ?ll=lat,lng
     if (!lat) { var m = url.match(/[?&]ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/); if (m) { lat = m[1]; lng = m[2]; } }
 
     if (lat && lng) { latInput.value = lat; lngInput.value = lng; }
@@ -385,16 +443,17 @@ function hapusGereja(id) {
         text: 'Yakin ingin menghapus gereja ini? Semua jadwal, foto, dan saran terkait juga akan dihapus.',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#dc3545',
+        confirmButtonColor: '#B91C1C',
         cancelButtonColor: '#6c757d',
         confirmButtonText: 'Ya, hapus!',
         cancelButtonText: 'Batal'
-    }).then(result => {
+    }).then(function(result) {
         if (!result.isConfirmed) return;
         $.post('<?= BASEURL; ?>admin/gereja/delete/' + id, {csrf_token: '<?= csrf_token(); ?>'}, function(res) {
             if (res.status == 200) {
-                Swal.fire({title:'Terhapus!', text:'Gereja berhasil dihapus.', icon:'success', timer:1500, showConfirmButton:false})
-                    .then(() => location.reload());
+                Swal.fire({title:'Terhapus!', text:'Gereja berhasil dihapus.', icon:'success', timer:1300, showConfirmButton:false});
+                if (dtGereja) dtGereja.ajax.reload(null, false);
+                else location.reload();
             } else {
                 Swal.fire({title:'Gagal!', text:res.message, icon:'error'});
             }
@@ -402,111 +461,29 @@ function hapusGereja(id) {
     });
 }
 
-function editGereja(id) {
-    $.get('<?= BASEURL; ?>admin/gereja/' + id, function(res) {
-        var d = res.data;
-        editDataCache = d;
-        var fotoHtml = '';
-        if (d.foto_list && d.foto_list.length > 0) {
-            for (var i = 0; i < d.foto_list.length; i++) {
-                var f = d.foto_list[i];
-                fotoHtml += '<div class="foto-input-group">';
-                fotoHtml += '<input type="url" name="foto_urls[]" class="form-control" value="' + escHtml(f.foto_url) + '">';
-                fotoHtml += '<input type="text" name="foto_keterangan[]" class="form-control" value="' + escHtml(f.keterangan) + '" placeholder="Keterangan">';
-                fotoHtml += '<button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()"><i class="bx bx-x"></i></button>';
-                fotoHtml += '</div>';
-            }
-        } else {
-            fotoHtml = '<div class="foto-input-group"><input type="url" name="foto_urls[]" class="form-control" placeholder="https://..."><input type="text" name="foto_keterangan[]" class="form-control" placeholder="Keterangan (opsional)"></div>';
-        }
-
-        var provOpts = '<option value="">-- Pilih Provinsi --</option>';
-        for (var i = 0; i < provinsiData.length; i++) {
-            var s = (provinsiData[i].name == d.provinsi) ? ' selected' : '';
-            provOpts += '<option value="' + escHtml(provinsiData[i].name) + '" data-id="' + provinsiData[i].id + '"' + s + '>' + escHtml(provinsiData[i].name) + '</option>';
-        }
-
-        var html = '<div class="row g-3">';
-        html += '<div class="col-12"><label class="form-label">Nama Gereja</label><input type="text" name="nama_gereja" class="form-control" value="' + escHtml(d.nama_gereja) + '" required></div>';
-        html += '<div class="col-12"><label class="form-label">Alamat</label><textarea name="alamat" class="form-control" rows="2">' + escHtml(d.alamat) + '</textarea></div>';
-        html += '<div class="col-12 col-sm-6"><label class="form-label">Provinsi</label><select name="provinsi" class="form-select edit-select" id="editProvinsi">' + provOpts + '</select></div>';
-        html += '<div class="col-12 col-sm-6"><label class="form-label">Kabupaten/Kota</label><select name="kabupaten_kota" class="form-select edit-select" id="editKabupaten" disabled><option value="">-- Pilih Provinsi dulu --</option></select></div>';
-        html += '<div class="col-12 col-sm-6"><label class="form-label">Kecamatan</label><select name="kecamatan" class="form-select edit-select" id="editKecamatan" disabled><option value="">-- Pilih Kabupaten dulu --</option></select></div>';
-        html += '<div class="col-12 col-sm-6"><label class="form-label">Kelurahan</label><select name="kelurahan" class="form-select edit-select" id="editKelurahan" disabled><option value="">-- Pilih Kecamatan dulu --</option></select></div>';
-        html += '<div class="col-12"><label class="form-label">Link Google Maps</label><input type="text" name="link_maps" class="form-control" id="editLinkMaps" value="' + escHtml(d.link_maps) + '" oninput="extractLatLng(\'edit\')"></div>';
-        html += '<div class="col-12 col-sm-6"><label class="form-label">Latitude</label><input type="text" name="latitude" class="form-control" id="editLatitude" value="' + d.latitude + '"></div>';
-        html += '<div class="col-12 col-sm-6"><label class="form-label">Longitude</label><input type="text" name="longitude" class="form-control" id="editLongitude" value="' + d.longitude + '"></div>';
-        html += '<div class="col-12 col-sm-6"><label class="form-label">Kontak Telepon</label><input type="text" name="kontak_telepon" class="form-control" value="' + escHtml(d.kontak_telepon) + '"></div>';
-        html += '<div class="col-12"><label class="form-label">Deskripsi</label><textarea name="deskripsi" class="form-control" rows="3">' + escHtml(d.deskripsi) + '</textarea></div>';
-        html += '<div class="col-12"><label class="form-label">Foto Gereja (URL)</label><div id="editFotoList">' + fotoHtml + '</div>';
-        html += '<button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="tambahFoto(\'editFotoList\')"><i class="bx bx-plus me-1"></i>Tambah Foto</button></div>';
-
-        var sosmedHtml = '';
-        if (d.social_media_list && d.social_media_list.length > 0) {
-            for (var i = 0; i < d.social_media_list.length; i++) {
-                var s = d.social_media_list[i];
-                sosmedHtml += '<div class="sosmed-input-group d-flex gap-2 mb-1">';
-                sosmedHtml += '<select name="sosmed_platform[]" class="form-select" style="width:140px;flex-shrink:0;">';
-                for (var j = 0; j < sosmedPlatforms.length; j++) {
-                    var sel = (sosmedPlatforms[j] == s.platform) ? ' selected' : '';
-                    sosmedHtml += '<option value="' + sosmedPlatforms[j] + '"' + sel + '>' + sosmedPlatforms[j].charAt(0).toUpperCase() + sosmedPlatforms[j].slice(1) + '</option>';
-                }
-                sosmedHtml += '</select>';
-                sosmedHtml += '<input type="url" name="sosmed_url[]" class="form-control" value="' + escHtml(s.url) + '" placeholder="https://...">';
-                sosmedHtml += '<button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="this.parentElement.remove()"><i class="bx bx-x"></i></button>';
-                sosmedHtml += '</div>';
-            }
-        } else {
-            sosmedHtml = '<div class="sosmed-input-group d-flex gap-2 mb-1">';
-            sosmedHtml += '<select name="sosmed_platform[]" class="form-select" style="width:140px;flex-shrink:0;"><option value="website">Website</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="twitter">Twitter</option><option value="youtube">YouTube</option><option value="tiktok">TikTok</option><option value="linkedin">LinkedIn</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option></select>';
-            sosmedHtml += '<input type="url" name="sosmed_url[]" class="form-control" placeholder="https://...">';
-            sosmedHtml += '</div>';
-        }
-        html += '<div class="col-12"><label class="form-label">Sosial Media / Website</label><div id="editSosmedList">' + sosmedHtml + '</div>';
-        html += '<button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="tambahSosmed(\'editSosmedList\')"><i class="bx bx-plus me-1"></i>Tambah Sosial Media</button></div>';
-        html += '</div>';
-        $('#editBody').html(html);
-        $('#formEdit').attr('action', '<?= BASEURL; ?>admin/gereja/update/' + id);
-        $('#modalEdit').modal('show');
-    });
+function getSocialIcon(platform) {
+    var icons = {
+        website: 'bx bx-globe',
+        instagram: 'bx bxl-instagram',
+        facebook: 'bx bxl-facebook',
+        twitter: 'bx bxl-twitter',
+        youtube: 'bx bxl-youtube',
+        tiktok: 'bx bxl-tiktok',
+        linkedin: 'bx bxl-linkedin',
+        whatsapp: 'bx bxl-whatsapp',
+        telegram: 'bx bxl-telegram'
+    };
+    return icons[platform] || 'bx bx-link';
 }
 
-var editDataCache = null;
-
-function editLoadCascade(kabName, kecName, kelName) {
-    var pid = getSelectedDataId('editProvinsi');
-    var m = 'modalEdit';
-    if (!pid) return;
-    loadSelect2('<?= BASEURL; ?>admin/gereja/getRegencies/' + pid, 'editKabupaten', kabName || '', '-- Pilih Kabupaten --', m);
-    var waitForKab = setInterval(function() {
-        var kabSel = document.getElementById('editKabupaten');
-        if (kabSel && kabSel.options.length > 1) {
-            clearInterval(waitForKab);
-            if (kabName) { $(kabSel).val(kabName); $(kabSel).trigger('change'); }
-            var kid = getSelectedDataId('editKabupaten');
-            if (kid && kecName) {
-                loadSelect2('<?= BASEURL; ?>admin/gereja/getDistricts/' + kid, 'editKecamatan', kecName || '', '-- Pilih Kecamatan --', m);
-                var waitForKec = setInterval(function() {
-                    var kecSel = document.getElementById('editKecamatan');
-                    if (kecSel && kecSel.options.length > 1) {
-                        clearInterval(waitForKec);
-                        if (kecName) { $(kecSel).val(kecName); $(kecSel).trigger('change'); }
-                        var kid2 = getSelectedDataId('editKecamatan');
-                        if (kid2 && kelName) {
-                            loadSelect2('<?= BASEURL; ?>admin/gereja/getVillages/' + kid2, 'editKelurahan', kelName || '', '-- Pilih Kelurahan --', m);
-                            var waitForKel = setInterval(function() {
-                                var kelSel = document.getElementById('editKelurahan');
-                                if (kelSel && kelSel.options.length > 1) {
-                                    clearInterval(waitForKel);
-                                    if (kelName) { $(kelSel).val(kelName); }
-                                }
-                            }, 200);
-                        }
-                    }
-                }, 200);
-            }
-        }
-    }, 200);
+function syncUrlFilter() {
+    var q = ($('#filterSearch').val() || '').trim();
+    var prov = ($('#filterProvinsi').val() || '').trim();
+    var params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (prov) params.set('provinsi', prov);
+    var qs = params.toString();
+    window.history.replaceState(null, '', '<?= BASEURL; ?>admin/gereja' + (qs ? '?' + qs : ''));
 }
 
 (function() {
@@ -544,47 +521,12 @@ function editLoadCascade(kabName, kecName, kelName) {
                         if (kid) { loadSelect2('<?= BASEURL; ?>admin/gereja/getVillages/' + kid, 'addKelurahan', '', '-- Pilih Kelurahan --', m); }
                     });
 
+                    $('#modalAdd').on('shown.bs.modal', function() {
+                        initSel2('addProvinsi', 'modalAdd');
+                    });
+
                     $('#modalAdd').on('hidden.bs.modal', function() {
                         $('.add-select').each(function() {
-                            if ($(this).hasClass('select2-hidden-accessible')) { $(this).select2('destroy'); }
-                        });
-                    });
-
-                    $('#modalEdit').on('shown.bs.modal', function() {
-                        if (editDataCache) {
-                            initSel2('editProvinsi', 'modalEdit');
-                            editLoadCascade(editDataCache.kabupaten_kota, editDataCache.kecamatan, editDataCache.kelurahan);
-                            editDataCache = null;
-                        }
-                    });
-
-                    $(document).on('change', '#editProvinsi', function() {
-                        var pid = getSelectedDataId('editProvinsi');
-                        var m = 'modalEdit';
-                        resetSelect2('editKabupaten', '-- Pilih Provinsi dulu --', true);
-                        resetSelect2('editKecamatan', '-- Pilih Kabupaten dulu --', true);
-                        resetSelect2('editKelurahan', '-- Pilih Kecamatan dulu --', true);
-                        if (pid) { loadSelect2('<?= BASEURL; ?>admin/gereja/getRegencies/' + pid, 'editKabupaten', '', '-- Pilih Kabupaten --', m); }
-                    });
-
-                    $(document).on('change', '#editKabupaten', function() {
-                        var kid = getSelectedDataId('editKabupaten');
-                        var m = 'modalEdit';
-                        resetSelect2('editKecamatan', '-- Pilih Kabupaten dulu --', true);
-                        resetSelect2('editKelurahan', '-- Pilih Kecamatan dulu --', true);
-                        if (kid) { loadSelect2('<?= BASEURL; ?>admin/gereja/getDistricts/' + kid, 'editKecamatan', '', '-- Pilih Kecamatan --', m); }
-                    });
-
-                    $(document).on('change', '#editKecamatan', function() {
-                        var kid = getSelectedDataId('editKecamatan');
-                        var m = 'modalEdit';
-                        resetSelect2('editKelurahan', '-- Pilih Kecamatan dulu --', true);
-                        if (kid) { loadSelect2('<?= BASEURL; ?>admin/gereja/getVillages/' + kid, 'editKelurahan', '', '-- Pilih Kelurahan --', m); }
-                    });
-
-                    $('#modalEdit').on('hidden.bs.modal', function() {
-                        $('#editBody').empty();
-                        $('.edit-select').each(function() {
                             if ($(this).hasClass('select2-hidden-accessible')) { $(this).select2('destroy'); }
                         });
                     });
@@ -602,16 +544,147 @@ function editLoadCascade(kabName, kecName, kelName) {
     var waitDt = setInterval(function() {
         if (typeof $ !== 'undefined' && $.fn && $.fn.dataTable) {
             clearInterval(waitDt);
-            $('#table-gereja').DataTable({
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.10.18/i18n/Indonesian.json'
-                },
+
+            dtGereja = $('#table-gereja').DataTable({
+                processing: true,
+                serverSide: true,
+                searching: false,
                 pageLength: 10,
-                lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Semua"]],
-                order: [[0, 'asc']],
+                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                order: [[1, 'asc']],
                 autoWidth: false,
-                scrollX: true,
-                scrollCollapse: true
+                ajax: {
+                    url: '<?= BASEURL; ?>admin/gereja/datatable',
+                    type: 'GET',
+                    data: function(d) {
+                        d.q = ($('#filterSearch').val() || '').trim();
+                        d.provinsi = ($('#filterProvinsi').val() || '').trim();
+                    },
+                    dataSrc: function(json) {
+                        if (json && typeof json.recordsTotal === 'number') {
+                            $('#totalGerejaBadge').text(json.recordsTotal.toLocaleString('id-ID') + ' gereja');
+                        }
+                        return json && json.data ? json.data : [];
+                    }
+                },
+                language: {
+                    processing: 'Memuat data gereja...',
+                    lengthMenu: 'Tampilkan _MENU_ data',
+                    zeroRecords: 'Tidak ada gereja yang cocok dengan filter.',
+                    info: 'Menampilkan _START_–_END_ dari _TOTAL_ gereja',
+                    infoEmpty: 'Menampilkan 0 data',
+                    infoFiltered: '(disaring dari _MAX_ total gereja)',
+                    paginate: {
+                        first: 'Awal',
+                        last: 'Akhir',
+                        next: 'Berikutnya',
+                        previous: 'Sebelumnya'
+                    }
+                },
+                columns: [
+                    {
+                        data: 'no',
+                        orderable: false,
+                        className: 'text-center text-muted'
+                    },
+                    {
+                        data: 'nama_gereja',
+                        render: function(data, type, row) {
+                            var addr = row.alamat ? '<div class="cell-church-addr" title="' + escHtml(row.alamat) + '">' + escHtml(row.alamat) + '</div>' : '';
+                            return '<div class="cell-church-name">' + escHtml(row.nama_gereja) + '</div>' + addr;
+                        }
+                    },
+                    {
+                        data: 'provinsi',
+                        render: function(data, type, row) {
+                            var mainParts = [row.kabupaten_kota, row.provinsi].filter(Boolean);
+                            var subParts = [];
+                            if (row.kecamatan) subParts.push('Kec. ' + row.kecamatan);
+                            if (row.kelurahan) subParts.push('Kel. ' + row.kelurahan);
+                            if (!mainParts.length && !subParts.length) {
+                                return '<span class="cell-region-empty">Wilayah kosong</span>';
+                            }
+                            var html = '<div class="cell-region-main">' + escHtml(mainParts.join(', ') || '-') + '</div>';
+                            if (subParts.length) {
+                                html += '<div class="cell-region-sub">' + escHtml(subParts.join(' · ')) + '</div>';
+                            }
+                            return html;
+                        }
+                    },
+                    {
+                        data: 'kontak_telepon',
+                        render: function(data, type, row) {
+                            var html = '<div class="cell-contact-phone">' + escHtml(row.kontak_telepon || '-') + '</div>';
+                            var links = '';
+                            if (row.link_maps) {
+                                links += '<a href="' + escHtml(row.link_maps) + '" target="_blank" rel="noopener noreferrer" class="cell-icon-link" title="Buka Google Maps"><i class="bx bx-map-pin"></i></a>';
+                            }
+                            if (row.social_media_list && row.social_media_list.length) {
+                                row.social_media_list.forEach(function(sm) {
+                                    var label = sm.platform ? (sm.platform.charAt(0).toUpperCase() + sm.platform.slice(1)) : 'Tautan';
+                                    links += '<a href="' + escHtml(sm.url) + '" target="_blank" rel="noopener noreferrer" class="cell-icon-link" title="' + escHtml(label) + '"><i class="' + getSocialIcon(sm.platform) + '"></i></a>';
+                                });
+                            }
+                            if (links) html += '<div class="cell-links">' + links + '</div>';
+                            return html;
+                        }
+                    },
+                    {
+                        data: 'foto_list',
+                        orderable: false,
+                        render: function(data) {
+                            if (!data || !data.length) return '<span class="text-muted small">-</span>';
+                            var html = '<div class="cell-thumbs">';
+                            data.slice(0, 2).forEach(function(f) {
+                                html += '<img src="' + escHtml(f.foto_url) + '" alt="" title="' + escHtml(f.keterangan || '') + '" loading="lazy">';
+                            });
+                            if (data.length > 2) {
+                                html += '<span class="cell-thumb-more">+' + (data.length - 2) + '</span>';
+                            }
+                            html += '</div>';
+                            return html;
+                        }
+                    },
+                    {
+                        data: 'id',
+                        orderable: false,
+                        className: 'text-end text-nowrap',
+                        render: function(id) {
+                            var q = encodeURIComponent(($('#filterSearch').val() || '').trim());
+                            var prov = encodeURIComponent(($('#filterProvinsi').val() || '').trim());
+                            var editUrl = '<?= BASEURL; ?>admin/gereja/edit/' + id + '?q=' + q + '&provinsi=' + prov;
+                            return '<a href="' + editUrl + '" class="btn btn-sm btn-custom-outline me-1" title="Edit gereja"><i class="bx bx-edit"></i></a>' +
+                                   '<button type="button" class="btn btn-sm btn-outline-danger" onclick="hapusGereja(' + id + ')" title="Hapus gereja"><i class="bx bx-trash"></i></button>';
+                        }
+                    }
+                ]
+            });
+
+            $('#filterGerejaForm').on('submit', function(e) {
+                e.preventDefault();
+                syncUrlFilter();
+                dtGereja.ajax.reload();
+            });
+
+            var searchTimer = null;
+            $('#filterSearch').on('input', function() {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(function() {
+                    syncUrlFilter();
+                    dtGereja.ajax.reload();
+                }, 350);
+            });
+
+            $('#filterProvinsi').on('change', function() {
+                syncUrlFilter();
+                dtGereja.ajax.reload();
+            });
+
+            $('#btnResetFilter').on('click', function() {
+                $('#filterSearch').val('');
+                $('#filterProvinsi').val('').trigger('change');
+                syncUrlFilter();
+                dtGereja.ajax.reload();
             });
         }
     }, 50);

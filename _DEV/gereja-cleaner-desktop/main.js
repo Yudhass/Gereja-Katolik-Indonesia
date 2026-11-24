@@ -6,25 +6,49 @@ const mysql = require('mysql2/promise');
 
 let win = null;
 
+function parseEnvFile(text) {
+  const env = {};
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eqIdx = line.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = line.slice(0, eqIdx).trim();
+    let val = line.slice(eqIdx + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    } else {
+      const commentIdx = val.indexOf(' #');
+      if (commentIdx !== -1) val = val.slice(0, commentIdx).trim();
+    }
+    env[key] = val;
+  }
+  return env;
+}
+
 function getEnvDefaults() {
-  // Baca ../../.env (project root) agar config DB sama dengan aplikasi web.
-  const defaults = { host: 'localhost', port: 3306, user: 'root', password: '', database: 'db_gereja' };
+  // Cek .env di folder yang sama dengan .exe (saat sudah dibuild), lalu fallback ke ../../.env (mode dev).
+  const db = { host: 'localhost', port: 3306, user: 'root', password: '', database: 'db_gereja' };
+  let baseUrl = 'http://localhost/Gereja-Katolik-Indonesia/admin/gereja/edit/';
   try {
-    const envPath = path.join(__dirname, '..', '..', '.env');
-    if (fs.existsSync(envPath)) {
-      const text = fs.readFileSync(envPath, 'utf8');
-      const get = (k) => {
-        const m = text.match(new RegExp('^' + k + '=(.*)$', 'm'));
-        return m ? m[1].trim() : undefined;
-      };
-      if (get('DB_HOST')) defaults.host = get('DB_HOST');
-      if (get('DB_PORT')) defaults.port = Number(get('DB_PORT')) || 3306;
-      if (get('DB_USER')) defaults.user = get('DB_USER');
-      if (get('DB_PASS') !== undefined) defaults.password = get('DB_PASS');
-      if (get('DB_NAME')) defaults.database = get('DB_NAME');
+    const candidates = [
+      path.join(path.dirname(process.execPath), '.env'),
+      path.join(__dirname, '..', '..', '.env'),
+    ];
+    const envPath = candidates.find((p) => fs.existsSync(p));
+    if (envPath) {
+      const env = parseEnvFile(fs.readFileSync(envPath, 'utf8'));
+      if (env.DB_HOST) db.host = env.DB_HOST;
+      if (env.DB_PORT) db.port = Number(env.DB_PORT) || 3306;
+      if (env.DB_USER) db.user = env.DB_USER;
+      if (env.DB_PASS !== undefined) db.password = env.DB_PASS;
+      if (env.DB_NAME) db.database = env.DB_NAME;
+      if (env.BASE_URL) {
+        baseUrl = env.BASE_URL.replace(/\/+$/, '') + '/admin/gereja/edit/';
+      }
     }
   } catch (_) { /* pakai defaults */ }
-  return defaults;
+  return { db, baseUrl };
 }
 
 function createWindow() {
@@ -69,6 +93,8 @@ const EMPTY_COND = [
 const ADDR_COND = "(alamat IS NULL OR TRIM(alamat) = '' OR alamat LIKE '%(S)%')";
 
 const PROBLEM_COND = `(${EMPTY_COND} OR ${ADDR_COND})`;
+const FETCH_LIMIT = 5000;
+const MAX_OPEN_URLS = 100;
 
 async function withConn(cfg, fn) {
   const conn = await mysql.createConnection({
@@ -83,10 +109,16 @@ async function withConn(cfg, fn) {
   }
 }
 
-ipcMain.handle('app:get-defaults', () => ({
-  db: getEnvDefaults(),
-  baseUrl: 'http://192.168.1.240/Gereja-Katolik-Indonesia/admin/gereja/edit/',
-}));
+function isSafeHttpUrl(raw) {
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch (_) {
+    return false;
+  }
+}
+
+ipcMain.handle('app:get-defaults', () => getEnvDefaults());
 
 ipcMain.handle('db:test', async (_e, cfg) => {
   try {
@@ -108,13 +140,21 @@ ipcMain.handle('db:fetch', async (_e, cfg) => {
       const [[t]] = await conn.query('SELECT COUNT(*) AS total FROM gereja');
       const [[k]] = await conn.query(`SELECT COUNT(*) AS kosong FROM gereja WHERE ${EMPTY_COND}`);
       const [[a]] = await conn.query(`SELECT COUNT(*) AS n FROM gereja WHERE ${ADDR_COND}`);
+      const [[p]] = await conn.query(`SELECT COUNT(*) AS n FROM gereja WHERE ${PROBLEM_COND}`);
       const [rows] = await conn.query(
         `SELECT id, nama_gereja, alamat, provinsi, kabupaten_kota, kecamatan, kelurahan,
                 (CASE WHEN ${EMPTY_COND} THEN 1 ELSE 0 END) AS wilayah_kosong,
                 (CASE WHEN ${ADDR_COND} THEN 1 ELSE 0 END) AS alamat_tidak_lengkap
-         FROM gereja WHERE ${PROBLEM_COND} ORDER BY id ASC LIMIT 5000`
+         FROM gereja WHERE ${PROBLEM_COND} ORDER BY id ASC LIMIT ${FETCH_LIMIT}`
       );
-      return { total: t.total, kosong: k.kosong, alamatS: a.n, rows };
+      return {
+        total: t.total,
+        kosong: k.kosong,
+        alamatS: a.n,
+        totalProblem: p.n,
+        truncated: p.n > rows.length,
+        rows,
+      };
     });
     return { ok: true, ...out };
   } catch (err) {
@@ -127,17 +167,24 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 ipcMain.handle('app:open-urls', async (_e, urls) => {
   // Buka banyak URL ke browser default satu per satu dengan jeda
   // agar tidak diblokir popup-blocker dan tidak membanjiri OS.
-  const list = Array.isArray(urls) ? urls.filter(Boolean).slice(0, 100) : [];
+  const all = Array.isArray(urls) ? urls.filter(Boolean) : [];
+  const list = all.slice(0, MAX_OPEN_URLS);
+  const skipped = Math.max(0, all.length - list.length);
   let opened = 0;
   const failed = [];
   for (const u of list) {
+    if (!win || win.isDestroyed()) break;
+    if (!isSafeHttpUrl(u)) {
+      failed.push(u);
+      continue;
+    }
     try {
       await shell.openExternal(u);
       opened++;
-    } catch (err) {
+    } catch (_) {
       failed.push(u);
     }
-    await sleep(350);
+    if (list.length > 1) await sleep(350);
   }
-  return { ok: true, opened, failed };
+  return { ok: failed.length === 0, opened, failed, skipped };
 });

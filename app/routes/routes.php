@@ -1,6 +1,7 @@
 <?php
 
 $router->get('/', 'HomeController@index');
+$router->get('/sitemap.xml', 'HomeController@sitemap');
 
 $router->get('/gereja/{slug}', 'GerejaController@detail');
 $router->get('/cari', 'CariController@index');
@@ -24,6 +25,7 @@ $router->get('/admin/dashboard', 'AdminController@index', array('auth'));
 $router->get('/admin/gereja/check', 'AdminGerejaController@check');
 $router->post('/admin/gereja/check-batch', 'AdminGerejaController@checkBatch');
 $router->get('/admin/gereja', 'AdminGerejaController@index', array('auth'));
+$router->get('/admin/gereja/datatable', 'AdminGerejaController@datatable', array('auth'));
 $router->get('/admin/gereja/edit/{id}', 'AdminGerejaController@editPage', array('auth'));
 $router->get('/admin/gereja/{id}', 'AdminGerejaController@get', array('auth'));
 $router->post('/admin/gereja/add', 'AdminGerejaController@add', array('auth'));

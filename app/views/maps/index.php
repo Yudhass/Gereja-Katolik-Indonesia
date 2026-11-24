@@ -1,4 +1,41 @@
-<?php $this->view('layouts/guest_openTag', array('title' => $title, 'css' => array('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css', 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css'))); ?>
+<?php
+$hasMapsFilter = !empty($selectedProvinsi) || !empty($selectedKabupaten) || !empty($selectedKecamatan) || !empty($selectedKelurahan) || !empty($selectedJamDari) || !empty($selectedNamaGereja);
+$mapsSeoDesc = 'Peta interaktif lokasi gereja Katolik di seluruh Indonesia. Filter berdasarkan provinsi, kabupaten/kota, kecamatan, atau jam misa untuk menemukan gereja terdekat.';
+$mapsSeo = array(
+    'title' => 'Peta Gereja Katolik Indonesia — Lokasi Paroki Terdekat | Info Gereja',
+    'description' => $mapsSeoDesc,
+    'keywords' => 'peta gereja katolik, lokasi gereja katolik terdekat, maps gereja katolik indonesia, rute gereja katolik',
+    'canonical' => BASEURL . 'maps',
+    'robots' => $hasMapsFilter ? 'noindex, follow' : 'index, follow',
+    'schema' => array(
+        array(
+            '@context' => 'https://schema.org',
+            '@type' => 'WebPage',
+            'name' => 'Peta Gereja Katolik Indonesia',
+            'url' => BASEURL . 'maps',
+            'description' => $mapsSeoDesc,
+        ),
+        array(
+            '@context' => 'https://schema.org',
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => array(
+                array('@type' => 'ListItem', 'position' => 1, 'name' => 'Beranda', 'item' => BASEURL),
+                array('@type' => 'ListItem', 'position' => 2, 'name' => 'Peta Gereja', 'item' => BASEURL . 'maps'),
+            ),
+        ),
+    ),
+);
+?>
+<?php $this->view('layouts/guest_openTag', array(
+    'title' => $title,
+    'seo' => $mapsSeo,
+    'bodyClass' => 'gki-maps-page',
+    'css' => array(
+        'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+        'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css',
+        'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css'
+    )
+)); ?>
 <?php
 $hasFilter = $selectedProvinsi || $selectedKabupaten || $selectedKecamatan || $selectedKelurahan || $selectedJamDari || $selectedNamaGereja;
 $hariUrut = array('Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu','Spesial');
@@ -10,17 +47,17 @@ foreach ($gerejaList as $g) {
     if (isset($allJadwal[$g->id])) {
         foreach ($allJadwal[$g->id] as $j) {
             $jdw[] = array(
-                'hari' => $j->hari,
+                'hari' => decode_text($j->hari),
                 'tanggal' => $j->tanggal,
                 'waktu' => date('H:i', strtotime($j->waktu_mulai)),
-                'kategori' => $j->kategori,
-                'keterangan' => isset($j->keterangan) ? (string)$j->keterangan : ''
+                'kategori' => decode_text($j->kategori),
+                'keterangan' => isset($j->keterangan) ? decode_text($j->keterangan) : ''
             );
         }
     }
     $mapLat = (float)$g->latitude;
     $mapLng = (float)$g->longitude;
-    
+
     $socmedData = array();
     if (isset($allSocial[$g->id])) {
         foreach ($allSocial[$g->id] as $s) {
@@ -31,29 +68,30 @@ foreach ($gerejaList as $g) {
             }
         }
     }
-    // $allFoto kini berisi array string URL (dari bulk query); tetap dukung format lama (array objek)
+
     $fotoUrls = array();
     if (isset($allFoto[$g->id]) && is_array($allFoto[$g->id])) {
         foreach (array_slice($allFoto[$g->id], 0, 5) as $f) {
             $fotoUrls[] = is_object($f) ? $f->foto_url : $f;
         }
     }
-    // Potong deskripsi agar JSON peta tidak membengkak (detail lengkap ada di halaman detail)
-    $deskripsi = isset($g->deskripsi) ? (string)$g->deskripsi : '';
+
+    $deskripsi = isset($g->deskripsi) ? decode_text($g->deskripsi) : '';
     if (function_exists('mb_strlen') && mb_strlen($deskripsi, 'UTF-8') > 800) {
         $deskripsi = mb_substr($deskripsi, 0, 800, 'UTF-8');
     } elseif (strlen($deskripsi) > 800) {
         $deskripsi = substr($deskripsi, 0, 800);
     }
+
     $gerejaJson[] = array(
         'id' => $g->id,
-        'nama' => $g->nama_gereja,
-        'alamat' => $g->alamat,
-        'provinsi' => $g->provinsi,
-        'kabkota' => $g->kabupaten_kota,
-        'kecamatan' => $g->kecamatan,
-        'kelurahan' => $g->kelurahan,
-        'telepon' => $g->kontak_telepon,
+        'nama' => decode_text($g->nama_gereja),
+        'alamat' => decode_text($g->alamat),
+        'provinsi' => decode_text($g->provinsi),
+        'kabkota' => decode_text($g->kabupaten_kota),
+        'kecamatan' => decode_text($g->kecamatan),
+        'kelurahan' => decode_text($g->kelurahan),
+        'telepon' => decode_text($g->kontak_telepon),
         'deskripsi' => $deskripsi,
         'slug' => $g->slug ? $g->slug : $g->id,
         'lat' => $mapLat,
@@ -68,313 +106,380 @@ $gerejaJsonEncoded = json_encode($gerejaJson);
 if ($gerejaJsonEncoded === false) {
     $gerejaJsonEncoded = '[]';
 }
-// Bebaskan memori sebelum merangkai <script> besar
 $totalGereja = isset($gerejaJson) ? count($gerejaJson) : 0;
 unset($gerejaJson, $gerejaList, $allJadwal, $allFoto, $allSocial);
+
+ob_start();
+?>
+<span class="gki-count-pill d-none d-sm-inline-flex" id="mapCountPill"><?= (int)$totalGereja; ?> gereja</span>
+<button type="button" class="gki-btn gki-btn-outline gki-btn-sm d-md-none <?= $hasFilter ? 'is-active' : ''; ?>" onclick="toggleFilter()" aria-label="Filter peta">
+    <i class="bx bx-filter-alt" aria-hidden="true"></i>
+    <span>Filter</span>
+</button>
+<?php
+$mapsNavActions = ob_get_clean();
 ?>
 
 <style>
-    html, body { height: 100%; margin: 0; padding: 0; }
-    body { background: #e8e8e8; overflow: hidden; padding-bottom: 0 !important; }
-    #map { position: fixed; top: 48px; left: 0; right: 0; bottom: 0; z-index: 1; }
-    .map-header {
-        position: fixed; top: 0; left: 0; right: 0;
-        z-index: 1000;
-        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 50%, var(--primary-dark) 100%);
-        color: white; padding: 0.5rem 0.75rem;
-        display: flex; align-items: center; gap: 0.5rem;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    body.gki-maps-page {
+        height: 100dvh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        padding-bottom: 0;
     }
-    .map-header .header-left { display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0; }
-    .map-header .header-left h1 { font-size: 0.95rem; font-weight: 700; color: #fff; margin: 0; white-space: nowrap; }
-    .map-header .header-left span { font-size: 0.7rem; opacity: 0.85; display: block; }
-    .map-header .header-left .header-text { min-width: 0; }
-    .map-header .btn-header { background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 10px; padding: 0.35rem 0.65rem; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; flex-shrink: 0; transition: background 0.2s; cursor: pointer; }
-    .map-header .btn-header:hover { background: rgba(255,255,255,0.25); color: #fff; }
-    .map-header .btn-header.active-filter { background: #CFA969; }
-    .map-header .btn-header.active-filter:hover { background: #b8954f; }
-
-    .leaflet-popup-content-wrapper { border-radius: 12px; }
-    .leaflet-popup-content { margin: 0.5rem 0.7rem; font-size: 0.85rem; line-height: 1.4; }
-    .leaflet-popup-content strong { color: var(--primary); }
-    .leaflet-popup-content .popup-addr { color: #555; font-size: 0.78rem; }
-    .leaflet-popup-content .popup-link { display: inline-block; margin-top: 0.3rem; background: var(--primary); color: #fff; padding: 0.2rem 0.6rem; border-radius: 50px; font-size: 0.75rem; text-decoration: none; cursor: pointer; border: none; }
-    .leaflet-popup-content .popup-link:hover { background: var(--primary-dark); }
-
-    .marker-cluster-small { background-color: rgba(44,68,99,0.3); }
-    .marker-cluster-small div { background-color: #2C4463; color: #fff; font-weight: 700; }
-    .marker-cluster-medium { background-color: rgba(74,107,140,0.3); }
-    .marker-cluster-medium div { background-color: #4A6B8C; color: #fff; font-weight: 700; }
-    .marker-cluster-large { background-color: rgba(207,169,105,0.3); }
-    .marker-cluster-large div { background-color: #CFA969; color: #fff; font-weight: 700; }
-
-    .filter-overlay, .sheet-overlay {
-        position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1055;
-        opacity: 0; visibility: hidden; transition: opacity .3s, visibility .3s;
+    .maps-shell {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        position: relative;
     }
-    .filter-overlay.active, .sheet-overlay.active { opacity: 1; visibility: visible; }
-
-    .filter-drawer {
-        position: fixed; top: 0; right: -320px; bottom: 0;
-        width: 320px; max-width: 85vw;
-        background: #fff; z-index: 1060;
-        transition: right .3s ease;
-        box-shadow: -4px 0 20px rgba(0,0,0,0.15);
-        display: flex; flex-direction: column;
+    .maps-filter-bar {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 0.65rem 1rem;
+        flex-shrink: 0;
+        z-index: 1010;
     }
-    .filter-drawer.open { right: 0; }
-    .filter-drawer-header {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 0.85rem 1.1rem; border-bottom: 1px solid #eee; flex-shrink: 0;
+    .maps-filter-form {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr)) auto;
+        gap: 0.5rem;
+        align-items: end;
+        max-width: 1400px;
+        margin-inline: auto;
     }
-    .filter-drawer-header h6 { font-weight: 700; color: var(--primary); margin: 0; font-size: 0.95rem; }
-    .filter-drawer-header .btn-close { font-size: 0.85rem; background: none; border: none; padding: 0.3rem; cursor: pointer; color: #444; }
-    .filter-drawer-body { flex: 1; overflow-y: auto; padding: 1.1rem; padding-bottom: 80px; }
-    .filter-drawer-body label { font-weight: 600; font-size: 0.8rem; color: #333; margin-bottom: 0.25rem; display: block; }
-    .filter-drawer-body select, .filter-drawer-body input { border-radius: 10px; border: 1px solid #bbb; padding: 0.45rem 0.7rem; font-size: 0.85rem; width: 100%; }
-    .filter-drawer-body select:focus, .filter-drawer-body input:focus { border-color: var(--primary); box-shadow: 0 0 0 0.2rem rgba(44,68,99,0.1); outline: none; }
-    .filter-drawer-body .mb-3 { margin-bottom: 0.9rem; }
-    .filter-drawer-body .btn-filter { background: var(--primary); color: #fff; border: none; border-radius: 10px; padding: 0.55rem 1.2rem; font-weight: 600; font-size: 0.88rem; width: 100%; }
-    .filter-drawer-body .btn-filter:hover { background: var(--primary-dark); }
-    .filter-drawer-body .btn-reset { background: transparent; color: #444; border: 1px solid #bbb; border-radius: 10px; padding: 0.55rem 1rem; font-weight: 600; font-size: 0.85rem; text-decoration: none; display: block; text-align: center; width: 100%; }
-    .filter-drawer-body .btn-reset:hover { background: #f5f5f5; }
+    .maps-filter-bar .gki-field label {
+        font-size: 0.72rem;
+        margin-bottom: 0.18rem;
+    }
+    .maps-filter-bar .gki-select,
+    .maps-filter-bar .gki-input {
+        min-height: 34px;
+        padding: 0.25rem 0.55rem;
+        font-size: 0.8rem;
+    }
+    .maps-filter-actions {
+        display: flex;
+        gap: 0.35rem;
+    }
+    .maps-stage {
+        flex: 1 1 auto;
+        min-height: 0;
+        position: relative;
+    }
+    #map {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+    }
+    @media (max-width: 1199px) and (min-width: 768px) {
+        .maps-filter-form {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .maps-filter-actions {
+            grid-column: 1 / -1;
+            justify-content: flex-end;
+        }
+    }
+    @media (max-width: 767px) {
+        .maps-filter-bar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 320px;
+            max-width: 88vw;
+            height: 100dvh;
+            padding: 0;
+            border-bottom: none;
+            border-radius: 16px 0 0 16px;
+            box-shadow: -6px 0 28px rgba(17, 29, 24, 0.18);
+            transform: translateX(100%);
+            transition: transform 0.24s ease;
+            z-index: 1060;
+            display: flex;
+            flex-direction: column;
+        }
+        .maps-filter-bar.open {
+            transform: translateX(0);
+        }
+        .maps-filter-drawer-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem 1.1rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+        }
+        .maps-filter-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            align-items: stretch;
+        }
+        .maps-filter-bar .gki-select,
+        .maps-filter-bar .gki-input {
+            min-height: 42px;
+            font-size: 16px;
+            padding: 0.45rem 0.7rem;
+        }
+        .maps-stage {
+            margin-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+        }
+    }
 
+    /* Leaflet popup styling */
+    .leaflet-popup-content-wrapper {
+        border-radius: 12px;
+        box-shadow: var(--shadow-md);
+    }
+    .leaflet-popup-content {
+        margin: 0.65rem 0.8rem;
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        font-size: 0.84rem;
+        line-height: 1.45;
+    }
+    .leaflet-popup-content strong {
+        color: var(--ink);
+        font-weight: 700;
+    }
+    .leaflet-popup-content .popup-addr {
+        color: var(--ink-secondary);
+        font-size: 0.78rem;
+    }
+    .leaflet-popup-content .popup-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-top: 0.45rem;
+        background: var(--primary);
+        color: #fff;
+        padding: 0.3rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+    }
+    .leaflet-popup-content .popup-link:hover {
+        background: var(--primary-hover);
+    }
+
+    /* Detail Sheet Panel */
+    .sheet-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(17, 29, 24, 0.42);
+        z-index: 1055;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.24s ease, visibility 0.24s ease;
+    }
+    .sheet-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
     .sheet-panel {
-        position: fixed; left: 0; right: 0; bottom: 0;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
         z-index: 1060;
-        background: #fff;
+        background: var(--surface);
         border-radius: 20px 20px 0 0;
-        box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
+        box-shadow: 0 -6px 28px rgba(17, 29, 24, 0.16);
         transform: translateY(100%);
-        transition: transform .35s ease, visibility .35s ease;
-        max-height: 75vh;
+        transition: transform 0.28s ease, visibility 0.28s ease;
+        max-height: 78vh;
         display: flex;
         flex-direction: column;
         visibility: hidden;
         pointer-events: none;
     }
-    .sheet-panel.open { transform: translateY(0); visibility: visible; pointer-events: auto; }
-    .sheet-handle { width: 36px; height: 4px; background: #ccc; border-radius: 4px; margin: 10px auto 6px; flex-shrink: 0; }
-    .sheet-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 0.25rem 1.1rem 0.6rem; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
-    .sheet-header h3 { font-size: 1rem; font-weight: 700; color: var(--primary); margin: 0; line-height: 1.3; padding-right: 0.5rem; }
-    .sheet-header .btn-close { background: none; border: none; padding: 0.3rem; cursor: pointer; color: #888; font-size: 1.2rem; flex-shrink: 0; }
-    .sheet-body { flex: 1; overflow-y: auto; padding: 0.75rem 1.1rem; }
-    .sheet-body .info-row { display: flex; gap: 0.6rem; padding: 0.4rem 0; }
-    .sheet-body .info-row i { color: var(--primary); width: 1.2rem; font-size: 1.05rem; flex-shrink: 0; margin-top: 0.1rem; }
-    .sheet-body .info-row div { font-size: 0.85rem; color: #444; line-height: 1.5; }
-    .sheet-body .section-label { font-weight: 700; font-size: 0.8rem; color: var(--primary); margin: 0.7rem 0 0.4rem; padding-bottom: 0.3rem; border-bottom: 1.5px solid var(--primary); }
-    .sheet-body .jadwal-sheet { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0; border-bottom: 1px solid #f5f5f5; font-size: 0.82rem; }
-    .sheet-body .jadwal-sheet:last-child { border-bottom: none; }
-    .sheet-body .jadwal-sheet .jw-day { font-weight: 600; color: #2C4463; flex: 0 0 3rem; }
-    .sheet-body .jadwal-sheet .jw-time { font-weight: 700; color: var(--primary); flex: 0 0 2.6rem; background: rgba(44,68,99,0.08); padding: 0.05rem 0.3rem; border-radius: 4px; text-align: center; font-size: 0.78rem; }
-    .sheet-body .jadwal-sheet .jw-ket { color: #555; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.78rem; }
-    .sheet-body .jadwal-sheet .jw-badge { background: rgba(44,68,99,0.1); color: #2C4463; font-weight: 700; font-size: 0.58rem; padding: 0.1rem 0.35rem; border-radius: 3px; flex-shrink: 0; }
-    .sheet-body .sheet-deskripsi { font-size: 0.83rem; color: #444; line-height: 1.6; margin-top: 0.3rem; }
-    .sheet-body .sheet-foto-wrap { position: relative; border-radius: 12px; overflow: hidden; margin-bottom: 0.5rem; }
-    .sheet-body .sheet-foto-wrap img { width: 100%; height: 160px; object-fit: cover; background: #eee; display: none; }
-    .sheet-body .sheet-foto-wrap img.active { display: block; }
-    .sheet-body .sheet-foto-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.35); color: #fff; border: none; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1rem; transition: background .2s; z-index: 2; }
-    .sheet-body .sheet-foto-nav:hover { background: rgba(0,0,0,0.6); }
-    .sheet-body .sheet-foto-nav.prev { left: 6px; }
-    .sheet-body .sheet-foto-nav.next { right: 6px; }
-    .sheet-body .sheet-foto-dots { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; }
-    .sheet-body .sheet-foto-dots span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer; }
-    .sheet-body .sheet-foto-dots span.active { background: #fff; }
-    .sheet-body .sheet-foto-placeholder { width: 100%; height: 100px; background: linear-gradient(135deg, var(--primary-light), var(--primary-dark)); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; }
-    .sheet-body .sheet-foto-placeholder i { font-size: 3rem; color: rgba(255,255,255,0.3); }
-    .sheet-body .socmed-sheet { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.3rem; }
-    .sheet-footer { display: flex; gap: 0.6rem; padding: 0.7rem 1.1rem; padding-bottom: calc(0.7rem + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #f0f0f0; flex-shrink: 0; }
-    .sheet-footer .btn-sheet { flex: 1; border-radius: 12px; padding: 0.5rem 1rem; font-weight: 600; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; border: none; cursor: pointer; }
-    .socmed-sheet-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; border-radius: 8px; font-size: 0.72rem; font-weight: 600; text-decoration: none; transition: all .2s; border: none; cursor: pointer; }
-    .socmed-sheet-btn:hover { transform: translateY(-1px); }
-    .socmed-sheet-btn .bx, .socmed-sheet-btn .bxl { font-size: 1rem; }
-    .ssocmed-website { background: #2C4463; color: #fff; }
-    .ssocmed-website:hover { background: #1A2D47; color: #fff; }
-    .ssocmed-instagram { background: linear-gradient(135deg, #833AB4, #FD1D1D, #F77737); color: #fff; }
-    .ssocmed-instagram:hover { color: #fff; }
-    .ssocmed-facebook { background: #1877F2; color: #fff; }
-    .ssocmed-facebook:hover { background: #0f6bd6; color: #fff; }
-    .ssocmed-twitter { background: #1DA1F2; color: #fff; }
-    .ssocmed-twitter:hover { background: #0d8bda; color: #fff; }
-    .ssocmed-youtube { background: #FF0000; color: #fff; }
-    .ssocmed-youtube:hover { background: #d60000; color: #fff; }
-    .ssocmed-tiktok { background: #010101; color: #fff; }
-    .ssocmed-tiktok:hover { background: #333; color: #fff; }
-    .ssocmed-linkedin { background: #0A66C2; color: #fff; }
-    .ssocmed-linkedin:hover { background: #004182; color: #fff; }
-    .ssocmed-whatsapp { background: #25D366; color: #fff; }
-    .ssocmed-whatsapp:hover { background: #1da851; color: #fff; }
-    .ssocmed-telegram { background: #0088CC; color: #fff; }
-    .ssocmed-telegram:hover { background: #0077b3; color: #fff; }
-    .ssocmed-other { background: #6c757d; color: #fff; }
-    .ssocmed-other:hover { background: #5a6268; color: #fff; }
-    .sheet-footer .btn-sheet-primary { background: var(--primary); color: #fff; }
-    .sheet-footer .btn-sheet-primary:hover { background: var(--primary-dark); color: #fff; }
-    .sheet-footer .btn-sheet-outline { background: transparent; border: 1.5px solid var(--primary); color: var(--primary); }
-    .sheet-footer .btn-sheet-outline:hover { background: var(--primary); color: #fff; }
-
-    @media (min-width: 768px) {
-        .map-header { padding: 0.65rem 1.2rem; }
-        .map-header .header-left h1 { font-size: 1.05rem; }
-        .map-header .header-left span { font-size: 0.75rem; }
-        .map-header .btn-header { padding: 0.4rem 0.8rem; font-size: 0.88rem; }
-        .sheet-panel { max-width: 440px; left: auto; right: 1rem; bottom: 1rem; border-radius: 20px; max-height: 80vh; }
-        .sheet-panel.open { transform: translateY(0); }
-        .sheet-handle { display: none; }
-
-        .filter-overlay { display: none !important; }
-        .btn-filter-toggle { display: none !important; }
-
-        .filter-drawer {
-            position: fixed !important;
-            top: 60px !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: auto !important;
-            width: 100% !important;
-            max-width: none !important;
-            z-index: 1001 !important;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
-            display: block !important;
-            transform: none !important;
-            transition: none !important;
-            border-radius: 0 !important;
-            height: auto !important;
-        }
-        .filter-drawer .filter-drawer-header { display: none !important; }
-        .filter-drawer-body {
-            padding: 0.45rem 1.2rem !important;
-            padding-bottom: 0.45rem !important;
-            overflow: visible !important;
-            flex: none !important;
-        }
-        .filter-drawer-body form {
-            display: flex;
-            align-items: flex-end;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-        .filter-drawer-body .mb-3 {
-            margin-bottom: 0 !important;
-            flex: 1;
-            min-width: 120px;
-        }
-        .filter-drawer-body label {
-            font-size: 0.65rem !important;
-            margin-bottom: 0.1rem !important;
-            white-space: nowrap;
-        }
-        .filter-drawer-body select,
-        .filter-drawer-body input {
-            font-size: 0.75rem !important;
-            padding: 0.25rem 0.45rem !important;
-            height: auto !important;
-        }
-        .filter-drawer-body .mt-4 { margin-top: 0 !important; }
-        .filter-drawer-body .d-flex.gap-2.mt-4 {
-            flex: 0 0 auto;
-            width: auto;
-            margin-top: 0 !important;
-        }
-        .filter-drawer-body .btn-filter,
-        .filter-drawer-body .btn-reset {
-            white-space: nowrap;
-            padding: 0.28rem 0.65rem !important;
-            font-size: 0.75rem !important;
-            height: auto !important;
-        }
-        #map { top: 120px !important; }
+    .sheet-panel.open {
+        transform: translateY(0);
+        visibility: visible;
+        pointer-events: auto;
     }
-    @media (max-width: 767px) {
-        .map-header .header-left h1 { font-size: 0.85rem; }
-        .map-header .header-left span { font-size: 0.65rem; }
-        .map-header .btn-header { font-size: 0.78rem; padding: 0.3rem 0.5rem; }
-        .leaflet-control-zoom { margin-bottom: 60px !important; }
-        .leaflet-control-attribution { margin-bottom: 52px !important; font-size: 0.6rem !important; }
-        .filter-drawer { width: 290px; }
-        .sheet-panel { max-height: 68vh; }
-        .sheet-body .sheet-foto-wrap img { height: 130px; }
+    @media (min-width: 768px) {
+        .sheet-panel {
+            max-width: 430px;
+            left: auto;
+            right: 1rem;
+            bottom: 1rem;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            max-height: calc(100dvh - 140px);
+        }
+        .sheet-handle {
+            display: none;
+        }
+    }
+    .sheet-handle {
+        width: 38px;
+        height: 4px;
+        background: var(--border-strong);
+        border-radius: 4px;
+        margin: 10px auto 6px;
+        flex-shrink: 0;
+    }
+    .sheet-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.85rem 1.1rem;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+    .sheet-header h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--ink);
+        margin: 0;
+        line-height: 1.35;
+    }
+    .sheet-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.9rem 1.1rem;
+    }
+    .sheet-body .info-row {
+        display: flex;
+        gap: 0.55rem;
+        padding: 0.35rem 0;
+        font-size: 0.84rem;
+        color: var(--ink-secondary);
+    }
+    .sheet-body .info-row i {
+        color: var(--primary);
+        font-size: 1rem;
+        flex-shrink: 0;
+        margin-top: 0.15rem;
+    }
+    .sheet-body .section-label {
+        font-weight: 700;
+        font-size: 0.82rem;
+        color: var(--ink);
+        margin: 0.85rem 0 0.45rem;
+        padding-bottom: 0.35rem;
+        border-bottom: 1px solid var(--border);
+    }
+    .sheet-body .jadwal-sheet {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.38rem 0;
+        border-bottom: 1px solid var(--surface-subtle);
+        font-size: 0.8rem;
+        font-variant-numeric: tabular-nums;
+    }
+    .sheet-body .jadwal-sheet:last-child { border-bottom: none; }
+    .sheet-body .jadwal-sheet .jw-day { font-weight: 700; color: var(--ink); flex: 0 0 3.4rem; }
+    .sheet-body .jadwal-sheet .jw-time { font-weight: 700; color: var(--primary); background: var(--primary-soft); padding: 0.1rem 0.45rem; border-radius: 5px; }
+    .sheet-body .jadwal-sheet .jw-ket { color: var(--ink-secondary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sheet-body .jadwal-sheet .jw-badge { background: var(--surface-subtle); color: var(--ink-secondary); font-weight: 700; font-size: 0.68rem; padding: 0.12rem 0.45rem; border-radius: var(--radius-pill); flex-shrink: 0; }
+    .sheet-body .sheet-deskripsi { font-size: 0.83rem; color: var(--ink-secondary); line-height: 1.6; }
+    .sheet-body .sheet-foto-wrap { position: relative; border-radius: 12px; overflow: hidden; margin-bottom: 0.65rem; background: var(--primary-dark); }
+    .sheet-body .sheet-foto-wrap img { width: 100%; height: 170px; object-fit: cover; display: none; }
+    .sheet-body .sheet-foto-wrap img.active { display: block; }
+    .sheet-body .sheet-foto-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(17, 29, 24, 0.55); color: #fff; border: none; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; }
+    .sheet-body .sheet-foto-nav.prev { left: 8px; }
+    .sheet-body .sheet-foto-nav.next { right: 8px; }
+    .sheet-body .sheet-foto-dots { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
+    .sheet-body .sheet-foto-dots span { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.55); cursor: pointer; }
+    .sheet-body .sheet-foto-dots span.active { background: #fff; }
+    .sheet-body .sheet-foto-placeholder { width: 100%; height: 110px; background: linear-gradient(145deg, var(--primary), var(--primary-dark)); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.65rem; color: rgba(255,255,255,0.35); font-size: 2.75rem; }
+    .sheet-body .socmed-sheet { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .socmed-sheet-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.3rem 0.65rem; border-radius: 8px; font-size: 0.75rem; font-weight: 600; border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink); text-decoration: none; }
+    .socmed-sheet-btn:hover { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+    .sheet-footer {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.8rem 1.1rem calc(0.8rem + env(safe-area-inset-bottom, 0px));
+        border-top: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+    .sheet-footer .gki-btn {
+        flex: 1;
+        min-height: 38px;
+        font-size: 0.82rem;
+        padding: 0.4rem 0.65rem;
     }
 </style>
 
-<div class="filter-overlay" id="filterOverlay" onclick="toggleFilter()"></div>
-<div class="filter-drawer" id="filterDrawer">
-    <div class="filter-drawer-header">
-        <h6><i class="bx bx-filter-alt me-1"></i>Filter Peta</h6>
-        <button type="button" class="btn-close" onclick="toggleFilter()"><i class="bx bx-x fs-4"></i></button>
-    </div>
-    <div class="filter-drawer-body">
-        <form method="GET" action="<?= BASEURL; ?>maps">
-            <div class="mb-3">
-                <label><i class="bx bx-map me-1"></i>Provinsi</label>
-                <select name="provinsi" id="filterProvinsi" onchange="loadKabupaten()">
-                    <option value="">Semua Provinsi</option>
-                    <?php foreach ($provinsiList as $p): ?>
-                    <option value="<?= htmlspecialchars($p); ?>" <?= $selectedProvinsi == $p ? 'selected' : ''; ?>><?= htmlspecialchars($p); ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label><i class="bx bx-building me-1"></i>Kabupaten/Kota</label>
-                <select name="kabupaten" id="filterKabupaten" onchange="loadKecamatan()">
-                    <option value="">Semua Kabupaten/Kota</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label><i class="bx bx-detail me-1"></i>Kecamatan</label>
-                <select name="kecamatan" id="filterKecamatan" onchange="loadKelurahan()">
-                    <option value="">Semua Kecamatan</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label><i class="bx bx-home me-1"></i>Kelurahan</label>
-                <select name="kelurahan" id="filterKelurahan">
-                    <option value="">Semua Kelurahan</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label><i class="bx bx-time me-1"></i>Jam Mulai Misa &ge;</label>
-                <input type="time" name="jam_dari" id="filterJamDari" value="<?= htmlspecialchars($selectedJamDari); ?>">
-            </div>
-            <div class="mb-3">
-                <label><i class="bx bx-search me-1"></i>Nama Gereja</label>
-                <input type="text" name="nama_gereja" id="filterNamaGereja" placeholder="Cth: gereja kemetiran" value="<?= htmlspecialchars($selectedNamaGereja); ?>">
-            </div>
-            <div class="d-flex gap-2 mt-4">
-                <button type="button" class="btn btn-filter flex-fill" onclick="applyFilter()"><i class="bx bx-filter me-1"></i>Terapkan</button>
-                <a href="<?= BASEURL; ?>maps" class="btn-reset flex-fill"><i class="bx bx-x me-1"></i>Reset</a>
-            </div>
-        </form>
+<?php $this->view('layouts/guest_navbar', array('activeMenu' => 'maps', 'mobileActions' => $mapsNavActions)); ?>
+
+<div class="maps-shell">
+    <div class="gki-drawer-overlay d-md-none" id="filterOverlay" onclick="toggleFilter()"></div>
+
+    <aside class="maps-filter-bar" id="filterDrawer" aria-label="Filter peta gereja">
+        <div class="gki-drawer-header d-md-none">
+            <h2><i class="bx bx-filter-alt" aria-hidden="true"></i>Filter Peta</h2>
+            <button type="button" class="btn-close" onclick="toggleFilter()" aria-label="Tutup filter"></button>
+        </div>
+        <div class="maps-filter-drawer-body">
+            <form method="GET" action="<?= BASEURL; ?>maps" class="maps-filter-form" onsubmit="event.preventDefault(); applyFilter();">
+                <div class="gki-field">
+                    <label for="filterProvinsi">Provinsi</label>
+                    <select name="provinsi" id="filterProvinsi" class="gki-select" onchange="loadKabupaten()">
+                        <option value="">Semua Provinsi</option>
+                        <?php foreach ($provinsiList as $p): ?>
+                        <option value="<?= htmlspecialchars($p); ?>" <?= $selectedProvinsi == $p ? 'selected' : ''; ?>><?= htmlspecialchars($p); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="gki-field">
+                    <label for="filterKabupaten">Kabupaten/Kota</label>
+                    <select name="kabupaten" id="filterKabupaten" class="gki-select" onchange="loadKecamatan()">
+                        <option value="">Semua Kabupaten/Kota</option>
+                    </select>
+                </div>
+                <div class="gki-field">
+                    <label for="filterKecamatan">Kecamatan</label>
+                    <select name="kecamatan" id="filterKecamatan" class="gki-select" onchange="loadKelurahan()">
+                        <option value="">Semua Kecamatan</option>
+                    </select>
+                </div>
+                <div class="gki-field">
+                    <label for="filterKelurahan">Kelurahan</label>
+                    <select name="kelurahan" id="filterKelurahan" class="gki-select" onchange="if(window.innerWidth>=768) applyFilter();">
+                        <option value="">Semua Kelurahan</option>
+                    </select>
+                </div>
+                <div class="gki-field">
+                    <label for="filterJamDari">Jam Misa &ge;</label>
+                    <input type="time" name="jam_dari" id="filterJamDari" class="gki-input" value="<?= htmlspecialchars($selectedJamDari); ?>">
+                </div>
+                <div class="gki-field">
+                    <label for="filterNamaGereja">Nama Gereja</label>
+                    <input type="text" name="nama_gereja" id="filterNamaGereja" class="gki-input" placeholder="Cth: Katedral..." value="<?= htmlspecialchars($selectedNamaGereja); ?>">
+                </div>
+                <div class="maps-filter-actions">
+                    <button type="button" class="gki-btn gki-btn-primary gki-btn-sm flex-fill" onclick="applyFilter(); if(window.innerWidth<768) toggleFilter();">
+                        <i class="bx bx-filter-alt" aria-hidden="true"></i>
+                        <span>Terapkan</span>
+                    </button>
+                    <a href="<?= BASEURL; ?>maps" class="gki-btn gki-btn-outline gki-btn-sm" title="Reset filter">Reset</a>
+                </div>
+            </form>
+        </div>
+    </aside>
+
+    <div class="maps-stage">
+        <div id="map"></div>
     </div>
 </div>
 
 <div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()"></div>
-<div class="sheet-panel" id="sheetPanel">
+<div class="sheet-panel" id="sheetPanel" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <div class="sheet-handle"></div>
     <div class="sheet-header">
         <h3 id="sheetTitle">-</h3>
-        <button type="button" class="btn-close" onclick="closeSheet()"><i class="bx bx-x"></i></button>
+        <button type="button" class="btn-close" onclick="closeSheet()" aria-label="Tutup detail"></button>
     </div>
     <div class="sheet-body" id="sheetBody"></div>
     <div class="sheet-footer" id="sheetFooter"></div>
 </div>
-
-<div class="map-header">
-    <div class="header-left">
-        <a href="<?= BASEURL; ?>" class="btn-header"><i class="bx bx-arrow-back"></i></a>
-        <i class="bx bx-map" style="font-size:1.2rem; flex-shrink:0;"></i>
-        <div class="header-text">
-            <h1>Peta Gereja Katolik</h1>
-            <span><?= isset($totalGereja) ? (int)$totalGereja : 0; ?> gereja ditampilkan</span>
-        </div>
-    </div>
-    <button class="btn-header btn-filter-toggle <?= $hasFilter ? 'active-filter' : ''; ?>" onclick="toggleFilter()">
-        <i class="bx bx-filter-alt"></i>
-        <?php if ($hasFilter): ?><i class="bx bx-check"></i><?php endif; ?>
-    </button>
-</div>
-
-<div id="map"></div>
 
 <script>var gerejaData = <?php echo $gerejaJsonEncoded; unset($gerejaJsonEncoded); ?>;</script>
 
@@ -405,20 +510,15 @@ L.control.layers({
     "Satelit": satellite, "CyclOSM": cyclosm, "HOT": hot, "Shortbread": shortbread
 }, null, {position: "topright"}).addTo(map);
 
-var markers = [];
-var bounds = [];
 var markerClusterGroup = L.markerClusterGroup({
     iconCreateFunction: function(cluster) {
         var count = cluster.getChildCount();
-        var size = \'small\';
-        if (count >= 10) size = \'medium\';
-        if (count >= 100) size = \'large\';
-        var bg = \'#2C4463\';
-        if (size === \'medium\') bg = \'#4A6B8C\';
-        if (size === \'large\') bg = \'#CFA969\';
+        var bg = "#14533C";
+        if (count >= 10) bg = "#1D6B4F";
+        if (count >= 100) bg = "#B8862D";
         return L.divIcon({
-            html: \'<div style="background:\' + bg + \';color:#fff;width:44px;height:44px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);"><i class="bx bx-church" style="font-size:1.1rem;line-height:1;"></i><span style="font-size:0.65rem;font-weight:700;line-height:1;margin-top:1px;">\' + count + \'</span></div>\',
-            className: \'\',
+            html: "<div style=\"background:" + bg + ";color:#fff;width:44px;height:44px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 2px 10px rgba(17,29,24,0.28);\"><i class=\"bx bx-church\" style=\"font-size:1.05rem;line-height:1;\"></i><span style=\"font-size:0.65rem;font-weight:700;line-height:1;margin-top:2px;\">" + count + "</span></div>",
+            className: "",
             iconSize: [44, 44],
             iconAnchor: [22, 22]
         });
@@ -431,7 +531,6 @@ function showGerejaDetail(idx) {
     document.getElementById("sheetTitle").textContent = d.nama;
 
     var body = "";
-
     var fotoList = (Array.isArray(d.foto) && d.foto.length > 0) ? d.foto : [];
     if (fotoList.length > 0) {
         body += "<div class=\"sheet-foto-wrap\" id=\"fotoWrap\">";
@@ -439,8 +538,8 @@ function showGerejaDetail(idx) {
             body += "<img src=\"" + escAttr(fotoList[fi]) + "\" class=\"" + (fi === 0 ? "active" : "") + "\" alt=\"" + escAttr(d.nama) + "\" onerror=\"this.style.display=\'none\'\">";
         }
         if (fotoList.length > 1) {
-            body += "<button class=\"sheet-foto-nav prev\" onclick=\"fotoPrev()\"><i class=\"bx bx-chevron-left\"></i></button>";
-            body += "<button class=\"sheet-foto-nav next\" onclick=\"fotoNext()\"><i class=\"bx bx-chevron-right\"></i></button>";
+            body += "<button class=\"sheet-foto-nav prev\" onclick=\"fotoPrev()\" aria-label=\"Foto sebelumnya\"><i class=\"bx bx-chevron-left\"></i></button>";
+            body += "<button class=\"sheet-foto-nav next\" onclick=\"fotoNext()\" aria-label=\"Foto berikutnya\"><i class=\"bx bx-chevron-right\"></i></button>";
             body += "<div class=\"sheet-foto-dots\" id=\"fotoDots\">";
             for (var fi = 0; fi < fotoList.length; fi++) {
                 body += "<span class=\"" + (fi === 0 ? "active" : "") + "\" onclick=\"fotoGo(" + fi + ")\"></span>";
@@ -454,38 +553,36 @@ function showGerejaDetail(idx) {
 
     body += "<div class=\"info-row\"><i class=\"bx bx-map-pin\"></i><div>" + escHtml(d.alamat) + "</div></div>";
     body += "<div class=\"info-row\"><i class=\"bx bx-map\"></i><div>" + escHtml(d.provinsi) + (d.kabkota ? ", " + escHtml(d.kabkota) : "") + "</div></div>";
-    if (d.kecamatan) { body += "<div class=\"info-row\"><i class=\"bx bx-detail\"></i><div>Kec. " + escHtml(d.kecamatan) + "</div></div>"; }
-    if (d.kelurahan) { body += "<div class=\"info-row\"><i class=\"bx bx-home\"></i><div>Kel. " + escHtml(d.kelurahan) + "</div></div>"; }
+    if (d.kecamatan) { body += "<div class=\"info-row\"><i class=\"bx bx-compass\"></i><div>Kec. " + escHtml(d.kecamatan) + (d.kelurahan ? ", Kel. " + escHtml(d.kelurahan) : "") + "</div></div>"; }
     if (d.telepon) { body += "<div class=\"info-row\"><i class=\"bx bx-phone\"></i><div>" + escHtml(d.telepon) + "</div></div>"; }
 
     if (d.social && d.social.length > 0) {
-        body += "<div class=\"section-label\"><i class=\"bx bx-share-alt me-1\"></i>Sosial Media</div>";
+        body += "<div class=\"section-label\">Website &amp; Media Sosial</div>";
         body += "<div class=\"socmed-sheet\">";
         for (var si = 0; si < d.social.length; si++) {
             var s = d.social[si];
-            var sCls = "ssocmed-other";
             var sIcon = "bx bx-link";
-            if (s.platform == "website") { sCls = "ssocmed-website"; sIcon = "bx bx-globe"; }
-            else if (s.platform == "instagram") { sCls = "ssocmed-instagram"; sIcon = "bx bxl-instagram"; }
-            else if (s.platform == "facebook") { sCls = "ssocmed-facebook"; sIcon = "bx bxl-facebook"; }
-            else if (s.platform == "twitter") { sCls = "ssocmed-twitter"; sIcon = "bx bxl-twitter"; }
-            else if (s.platform == "youtube") { sCls = "ssocmed-youtube"; sIcon = "bx bxl-youtube"; }
-            else if (s.platform == "tiktok") { sCls = "ssocmed-tiktok"; sIcon = "bx bxl-tiktok"; }
-            else if (s.platform == "linkedin") { sCls = "ssocmed-linkedin"; sIcon = "bx bxl-linkedin"; }
-            else if (s.platform == "whatsapp") { sCls = "ssocmed-whatsapp"; sIcon = "bx bxl-whatsapp"; }
-            else if (s.platform == "telegram") { sCls = "ssocmed-telegram"; sIcon = "bx bxl-telegram"; }
-            body += "<a href=\"" + escAttr(s.url) + "\" target=\"_blank\" rel=\"noopener\" class=\"socmed-sheet-btn " + sCls + "\"><i class=\"" + sIcon + "\"></i>" + escHtml(s.platform.charAt(0).toUpperCase() + s.platform.slice(1)) + "</a>";
+            if (s.platform == "website") sIcon = "bx bx-globe";
+            else if (s.platform == "instagram") sIcon = "bx bxl-instagram";
+            else if (s.platform == "facebook") sIcon = "bx bxl-facebook";
+            else if (s.platform == "twitter") sIcon = "bx bxl-twitter";
+            else if (s.platform == "youtube") sIcon = "bx bxl-youtube";
+            else if (s.platform == "tiktok") sIcon = "bx bxl-tiktok";
+            else if (s.platform == "linkedin") sIcon = "bx bxl-linkedin";
+            else if (s.platform == "whatsapp") sIcon = "bx bxl-whatsapp";
+            else if (s.platform == "telegram") sIcon = "bx bxl-telegram";
+            body += "<a href=\"" + escAttr(s.url) + "\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"socmed-sheet-btn\"><i class=\"" + sIcon + "\"></i>" + escHtml(s.platform.charAt(0).toUpperCase() + s.platform.slice(1)) + "</a>";
         }
         body += "</div>";
     }
 
     if (d.deskripsi) {
-        body += "<div class=\"section-label\"><i class=\"bx bx-info-circle me-1\"></i>Tentang</div>";
+        body += "<div class=\"section-label\">Tentang Gereja</div>";
         body += "<div class=\"sheet-deskripsi\">" + escHtml(d.deskripsi) + "</div>";
     }
 
     if (d.jadwal && d.jadwal.length > 0) {
-        body += "<div class=\"section-label\"><i class=\"bx bx-calendar-event me-1\"></i>Jadwal Misa</div>";
+        body += "<div class=\"section-label\">Jadwal Misa</div>";
         var grouped = {};
         for (var k = 0; k < d.jadwal.length; k++) {
             var j = d.jadwal[k];
@@ -511,14 +608,13 @@ function showGerejaDetail(idx) {
     document.getElementById("sheetBody").innerHTML = body;
     var mapsUrl = d.link_maps ? d.link_maps : ("https://www.google.com/maps?q=" + d.lat + "," + d.lng);
     document.getElementById("sheetFooter").innerHTML =
-        "<a href=\"" + mapsUrl + "\" target=\"_blank\" class=\"btn-sheet btn-sheet-outline\"><i class=\"bx bx-map\"></i> Lihat Lokasi</a>" +
-        "<a href=\"https://www.google.com/maps/dir/?api=1&destination=" + d.lat + "," + d.lng + "\" target=\"_blank\" class=\"btn-sheet btn-sheet-outline\"><i class=\"bx bx-navigation\"></i> Rute</a>" +
-        "<a href=\"" + BASEURL + "gereja/" + encodeURIComponent(d.slug) + "?from=maps\" class=\"btn-sheet btn-sheet-primary\"><i class=\"bx bx-detail\"></i> Detail</a>";
+        "<a href=\"" + escAttr(mapsUrl) + "\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"gki-btn gki-btn-outline\"><i class=\"bx bx-map\"></i> Maps</a>" +
+        "<a href=\"https://www.google.com/maps/dir/?api=1&destination=" + d.lat + "," + d.lng + "\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"gki-btn gki-btn-outline\"><i class=\"bx bx-navigation\"></i> Rute</a>" +
+        "<a href=\"" + BASEURL + "gereja/" + encodeURIComponent(d.slug) + "?from=maps\" class=\"gki-btn gki-btn-primary\"><i class=\"bx bx-detail\"></i> Detail</a>";
 
     fotoIdx = 0;
     document.getElementById("sheetPanel").classList.add("open");
     document.getElementById("sheetOverlay").classList.add("active");
-    document.body.style.overflow = "hidden";
 }
 
 var fotoIdx = 0;
@@ -539,19 +635,16 @@ function fotoGo(n) { fotoIdx = n; fotoShow(n); }
 function closeSheet() {
     document.getElementById("sheetPanel").classList.remove("open");
     document.getElementById("sheetOverlay").classList.remove("active");
-    document.body.style.overflow = "";
 }
 
 function escHtml(s) { if (!s) return ""; return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;"); }
 function escAttr(s) { if (!s) return ""; return s.replace(/\"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-';
 
-$mapScripts .= '
 map.addLayer(markerClusterGroup);
 
 function createGerejaMarker(data, idx) {
     var icon = L.divIcon({
-        html: "<div style=\"background:#2C4463;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:1rem;\"><i class=\"bx bx-church\"></i></div>",
+        html: "<div style=\"background:#14533C;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 2px 8px rgba(17,29,24,0.3);font-size:1rem;\"><i class=\"bx bx-church\"></i></div>",
         className: "",
         iconSize: [32, 32],
         iconAnchor: [16, 16],
@@ -560,8 +653,8 @@ function createGerejaMarker(data, idx) {
     var marker = L.marker([data.lat, data.lng], {icon: icon});
     marker.bindPopup(
         "<strong>" + escHtml(data.nama) + "</strong><br>" +
-        "<span class=\"popup-addr\"><i class=\"bx bx-map-pin\"></i> " + escHtml(data.alamat) + "</span><br>" +
-        "<button class=\"popup-link\" onclick=\"showGerejaDetail(" + idx + ")\"><i class=\"bx bx-detail\"></i> Detail</button>"
+        "<span class=\"popup-addr\">" + escHtml(data.alamat) + "</span><br>" +
+        "<button class=\"popup-link\" onclick=\"showGerejaDetail(" + idx + ")\"><i class=\"bx bx-detail\"></i> Lihat Detail</button>"
     );
     return marker;
 }
@@ -609,11 +702,11 @@ function applyFilter() {
         cnt++;
     }
 
-    var span = document.querySelector(".map-header .header-left span");
-    if (span) span.textContent = cnt + " gereja ditampilkan";
+    var pill = document.getElementById("mapCountPill");
+    if (pill) pill.textContent = cnt + " gereja";
 
     if (bnds.length > 0) {
-        map.flyToBounds(bnds, {padding: [30, 30], maxZoom: 14, duration: 0.8});
+        map.flyToBounds(bnds, {padding: [30, 30], maxZoom: 14, duration: 0.7});
     }
 
     var params = new URLSearchParams();
@@ -633,15 +726,22 @@ function toggleFilter() {
     var overlay = document.getElementById("filterOverlay");
     drawer.classList.toggle("open");
     overlay.classList.toggle("active");
-    document.body.style.overflow = drawer.classList.contains("open") ? "hidden" : "";
 }
 
-var filterProvinsi = "' . $selectedProvinsi . '";
-var filterKabupaten = "' . $selectedKabupaten . '";
-var filterKecamatan = "' . $selectedKecamatan . '";
-var filterKelurahan = "' . $selectedKelurahan . '";
-var filterNamaGereja = "' . $selectedNamaGereja . '";
-var filterJamDari = "' . $selectedJamDari . '";
+document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+        closeSheet();
+        var drawer = document.getElementById("filterDrawer");
+        if (drawer && drawer.classList.contains("open")) toggleFilter();
+    }
+});
+
+var filterProvinsi = "' . htmlspecialchars($selectedProvinsi, ENT_QUOTES) . '";
+var filterKabupaten = "' . htmlspecialchars($selectedKabupaten, ENT_QUOTES) . '";
+var filterKecamatan = "' . htmlspecialchars($selectedKecamatan, ENT_QUOTES) . '";
+var filterKelurahan = "' . htmlspecialchars($selectedKelurahan, ENT_QUOTES) . '";
+var filterNamaGereja = "' . htmlspecialchars($selectedNamaGereja, ENT_QUOTES) . '";
+var filterJamDari = "' . htmlspecialchars($selectedJamDari, ENT_QUOTES) . '";
 var isInit = true;
 
 function loadKabupaten() {
@@ -764,5 +864,5 @@ initFilter();
 </script>';
 
 $this->view('layouts/guest_bottom_nav', array('activeMenu' => 'maps'));
+$this->view('layouts/guest_closeTag', array('scripts' => $mapScripts));
 ?>
-<?php $this->view('layouts/guest_closeTag', array('scripts' => $mapScripts)); ?>

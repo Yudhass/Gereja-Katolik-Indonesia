@@ -5,64 +5,151 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="<?= BASEURL; ?>assets/images/logo/logo.webp" type="image/webp">
     <link rel="alternate icon" href="<?= BASEURL; ?>assets/images/logo/logo.png" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="<?= BASEURL; ?>assets/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?= BASEURL; ?>assets/css/bootstrap-extended.css" rel="stylesheet">
     <link href="<?= BASEURL; ?>assets/css/icons.css" rel="stylesheet">
-    <link href="<?= BASEURL; ?>assets/plugins/notifications/css/lobibox.min.css" rel="stylesheet" />
+    <link href="<?= BASEURL; ?>assets/plugins/notifications/css/lobibox.min.css" rel="stylesheet">
+    <link href="<?= BASEURL; ?>assets/css/guest.css?v=20261124" rel="stylesheet">
     <title>Login Admin - Info Gereja</title>
     <style>
-        body { background: linear-gradient(135deg, #2C4463 0%, #1A2D47 100%); min-height: 100vh; display: flex; align-items: center; }
-        .login-card { border: none; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); overflow: hidden; }
-        .login-header { background: #2C4463; color: white; padding: 2rem 1.5rem; text-align: center; }
-        .login-header h4 { font-weight: 700; color: #fff; }
-        .login-body { padding: 2rem; }
-        .form-control-custom { border-radius: 12px; border: 1px solid #ddd; padding: 0.7rem 1rem; font-size: 0.9rem; }
-        .form-control-custom:focus { border-color: #2C4463; box-shadow: 0 0 0 0.2rem rgba(44,68,99,0.1); }
-        .input-group .form-control-custom { border-radius: 12px 0 0 12px; }
-        #togglePassword { border-color: #ddd; background: #fff; }
-        #togglePassword:hover { background: #f0f0f0; }
-        .btn-login { background: #2C4463; color: white; border: none; border-radius: 12px; padding: 0.7rem; font-weight: 600; font-size: 1rem; }
-        .btn-login:hover { background: #1A2D47; color: white; }
+        body {
+            background: var(--bg-canvas);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem 1rem;
+        }
+        .auth-shell {
+            width: 100%;
+            max-width: 410px;
+        }
+        .auth-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            padding: 2rem 1.75rem;
+        }
+        .auth-brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 1.75rem;
+        }
+        .auth-logo-wrap {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: var(--primary-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.85rem;
+        }
+        .auth-logo-wrap img {
+            width: 34px;
+            height: 34px;
+            object-fit: contain;
+        }
+        .auth-brand h1 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--ink);
+            letter-spacing: -0.02em;
+            margin: 0 0 0.25rem;
+        }
+        .auth-brand p {
+            font-size: 0.85rem;
+            color: var(--ink-secondary);
+            margin: 0;
+        }
+        .auth-password-wrap {
+            position: relative;
+        }
+        .auth-password-wrap .gki-input {
+            padding-right: 2.75rem;
+        }
+        .auth-password-toggle {
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: transparent;
+            color: var(--ink-muted);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .auth-password-toggle:hover {
+            background: var(--surface-subtle);
+            color: var(--ink);
+        }
+        .auth-back {
+            text-align: center;
+            margin-top: 1.25rem;
+        }
+        .auth-back a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.84rem;
+            font-weight: 600;
+            color: var(--ink-secondary);
+        }
+        .auth-back a:hover {
+            color: var(--primary);
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-12 col-sm-10 col-md-6 col-lg-4">
-                <div class="card login-card">
-                    <div class="login-header">
-                        <i class="bx bx-church" style="font-size: 3rem;"></i>
-                        <h4 class="mt-2">Info Gereja</h4>
-                        <p class="mb-0 small">Panel Admin</p>
-                    </div>
-                    <div class="login-body">
-                        <form method="POST" action="<?= BASEURL; ?>login">
-                            <?= csrf_field(); ?>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold small">Email</label>
-                                <input type="email" name="email" class="form-control form-control-custom" placeholder="admin@gereja.com" required autofocus>
-                            </div>
-                            <div class="mb-4">
-                                <label class="form-label fw-semibold small">Password</label>
-                                <div class="input-group">
-                                    <input type="password" name="password" class="form-control form-control-custom" placeholder="Masukkan password" id="passwordInput" required>
-                                    <button type="button" class="btn btn-outline-secondary" id="togglePassword" style="border-radius:0 12px 12px 0; border-color:#ddd;">
-                                        <i class="bx bx-show" id="toggleIcon"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-login w-100"><i class="bx bx-log-in me-1"></i>Login</button>
-                        </form>
-                        <div class="text-center mt-3">
-                            <a href="<?= BASEURL; ?>" class="small text-decoration-none" style="color:#2C4463;">
-                                <i class="bx bx-arrow-back me-1"></i>Kembali ke Beranda
-                            </a>
-                        </div>
+    <main class="auth-shell">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <div class="auth-logo-wrap">
+                    <img src="<?= BASEURL; ?>assets/images/logo/logo.webp" alt="Logo Info Gereja" width="34" height="34">
+                </div>
+                <h1>Masuk Panel Admin</h1>
+                <p>Info Gereja — Direktori Gereja Katolik Indonesia</p>
+            </div>
+
+            <form method="POST" action="<?= BASEURL; ?>login">
+                <?= csrf_field(); ?>
+                <div class="gki-field mb-3">
+                    <label for="emailInput">Email</label>
+                    <input type="email" id="emailInput" name="email" class="gki-input" placeholder="admin@infogereja.id" required autofocus>
+                </div>
+                <div class="gki-field mb-4">
+                    <label for="passwordInput">Password</label>
+                    <div class="auth-password-wrap">
+                        <input type="password" name="password" class="gki-input" placeholder="Masukkan password" id="passwordInput" required>
+                        <button type="button" class="auth-password-toggle" id="togglePassword" aria-label="Tampilkan atau sembunyikan password">
+                            <i class="bx bx-show" id="toggleIcon" aria-hidden="true"></i>
+                        </button>
                     </div>
                 </div>
-            </div>
+                <button type="submit" class="gki-btn gki-btn-primary w-100">
+                    <i class="bx bx-log-in" aria-hidden="true"></i>
+                    <span>Masuk</span>
+                </button>
+            </form>
         </div>
-    </div>
+
+        <div class="auth-back">
+            <a href="<?= BASEURL; ?>">
+                <i class="bx bx-arrow-back" aria-hidden="true"></i>Kembali ke Beranda
+            </a>
+        </div>
+    </main>
+
     <script src="<?= BASEURL; ?>assets/js/jquery.min.js"></script>
     <script src="<?= BASEURL; ?>assets/plugins/notifications/js/lobibox.min.js"></script>
     <script src="<?= BASEURL; ?>assets/plugins/notifications/js/notifications.min.js"></script>

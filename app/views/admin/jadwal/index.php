@@ -1,11 +1,4 @@
-<?php $this->view('layouts/openTag', array('title' => $title, 'css' => array('assets/plugins/datatable/css/dataTables.bootstrap5.min.css'))); ?>
-<style>
-    .btn-custom-primary { background:#fff; border:2px solid #2C4463; color:#2C4463 !important; font-weight:600; }
-    .btn-custom-primary:hover { background:rgba(44,68,99,0.08); border-color:#1A2D47; color:#1A2D47 !important; }
-    .btn-custom-outline { color:#2C4463; border-color:#2C4463; }
-    .btn-custom-outline:hover { background:#2C4463; color:#fff; }
-
-</style>
+<?php $this->view('layouts/openTag', array('title' => $title, 'css2' => array('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'))); ?>
 <body>
 <div class="wrapper">
     <?php $this->view('layouts/admin_sidebar', array('sidebar' => 'jadwal')); ?>
@@ -13,9 +6,9 @@
     <div class="page-wrapper">
         <div class="page-content">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bx bx-calendar-event" style="color:#2C4463; font-size:1.3rem;"></i>
-                    <h5 class="mb-0 fw-bold" style="font-size:clamp(1rem,2.5vw,1.25rem);">Jadwal Misa</h5>
+                <div class="admin-page-title">
+                    <i class="bx bx-calendar-event"></i>
+                    <h5>Jadwal Misa</h5>
                 </div>
                 <button type="button" class="btn btn-custom-primary btn-sm flex-shrink-0" data-bs-toggle="modal" data-bs-target="#modalAdd">
                     <i class="bx bx-plus me-1"></i>Tambah Jadwal
@@ -82,9 +75,9 @@
             <p class="text-body-secondary small mb-2">Menampilkan jadwal dari <strong><?= count($jadwalGrouped); ?></strong> gereja</p>
             <?php foreach ($jadwalGrouped as $gid => $group): ?>
             <div class="card mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="background:#2C4463; color:#fff;">
-                    <h6 class="mb-0 fw-bold" style="color:#fff; font-size:clamp(0.8rem,1.8vw,1rem);"><i class="bx bx-church me-1"></i><?= htmlspecialchars($group['nama_gereja']); ?></h6>
-                    <span class="badge" style="background:#fff; color:#2C4463; flex-shrink:0;"><?= count($group['daftar']); ?> jadwal</span>
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="background:var(--gki-primary); color:#fff;">
+                    <h6 class="mb-0 fw-bold" style="color:#fff; font-size:clamp(0.85rem,1.8vw,1rem);"><i class="bx bx-church me-1"></i><?= htmlspecialchars($group['nama_gereja']); ?></h6>
+                    <span class="badge" style="background:#fff; color:var(--gki-primary); flex-shrink:0;"><?= count($group['daftar']); ?> jadwal</span>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive-sm">
@@ -136,14 +129,14 @@
         <div class="modal-content">
             <form method="POST" action="<?= BASEURL; ?>admin/jadwal/add">
                 <?= csrf_field(); ?>
-                <div class="modal-header" style="background:#2C4463; color:#fff;">
+                <div class="modal-header">
                     <h5 class="modal-title"><i class="bx bx-plus-circle me-1"></i>Tambah Jadwal Misa</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Gereja <span class="text-danger">*</span></label>
-                        <select name="gereja_id" class="form-select" required>
+                        <label class="form-label" for="addGerejaId">Gereja <span class="text-danger">*</span></label>
+                        <select name="gereja_id" id="addGerejaId" class="form-select" required>
                             <option value="">-- Pilih Gereja --</option>
                             <?php foreach ($gerejaList as $g): ?>
                             <option value="<?= $g->id; ?>"><?= htmlspecialchars($g->nama_gereja); ?></option>
@@ -193,7 +186,7 @@
         <div class="modal-content">
             <form method="POST" action="" id="formEdit">
                 <?= csrf_field(); ?>
-                <div class="modal-header" style="background:#2C4463; color:#fff;">
+                <div class="modal-header">
                     <h5 class="modal-title"><i class="bx bx-edit me-1"></i>Edit Jadwal Misa</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -260,5 +253,39 @@ function escHtml(s) {
     if (!s) return '';
     return $('<div>').text(s).html();
 }
+
+(function() {
+    var waitJq = setInterval(function() {
+        if (typeof $ !== 'undefined' && $.fn) {
+            clearInterval(waitJq);
+            var s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js';
+            s.onload = function() {
+                $(function() {
+                    function initAddGerejaSelect2() {
+                        var sel = $('#addGerejaId');
+                        if (!sel.length) return;
+                        if (sel.hasClass('select2-hidden-accessible')) {
+                            sel.select2('destroy');
+                        }
+                        sel.select2({
+                            dropdownParent: $('#modalAdd'),
+                            width: '100%',
+                            placeholder: '-- Pilih Gereja --',
+                            allowClear: true
+                        });
+                    }
+
+                    initAddGerejaSelect2();
+
+                    $('#modalAdd').on('shown.bs.modal', function() {
+                        initAddGerejaSelect2();
+                    });
+                });
+            };
+            document.head.appendChild(s);
+        }
+    }, 50);
+})();
 </script>
 <?php $this->view('layouts/closeTag'); ?>

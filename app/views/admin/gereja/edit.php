@@ -4,31 +4,7 @@ foreach ($provinces as $p) {
     $provArr[] = array('id' => $p->id, 'name' => $p->name);
 }
 ?>
-<?php $this->view('layouts/openTag', array('title' => $title, 'css' => array('assets/plugins/datatable/css/dataTables.bootstrap5.min.css'), 'css2' => array('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'))); ?>
-<style>
-    .btn-custom-primary { background:#fff; border:2px solid #2C4463; color:#2C4463 !important; font-weight:600; }
-    .btn-custom-primary:hover { background:rgba(44,68,99,0.08); border-color:#1A2D47; color:#1A2D47 !important; }
-    .btn-custom-outline { color:#2C4463; border-color:#2C4463; }
-    .btn-custom-outline:hover { background:#2C4463; color:#fff; }
-    .foto-input-group { display:flex; gap:0.5rem; margin-bottom:0.5rem; align-items:center; }
-    .foto-input-group input[type="url"] { flex:1; }
-    .foto-input-group input[type="text"] { width:150px; }
-    .select2-container--default .select2-selection--single {
-        border-radius: 8px !important;
-        border: 1px solid #dee2e6 !important;
-        min-height: 38px;
-    }
-    .select2-container--default .select2-selection--single .select2-selection__rendered {
-        line-height: 38px !important;
-    }
-    .select2-container--default .select2-selection--single .select2-selection__arrow {
-        height: 36px !important;
-    }
-    .select2-container--default .select2-search--dropdown .select2-search__field:focus {
-        border-color: var(--gki-primary) !important;
-        box-shadow: 0 0 0 0.2rem rgba(44, 68, 99, 0.12) !important;
-    }
-</style>
+<?php $this->view('layouts/openTag', array('title' => $title, 'css2' => array('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'))); ?>
 <body>
 <div class="wrapper">
     <?php $this->view('layouts/admin_sidebar', array('sidebar' => 'gereja')); ?>
@@ -36,9 +12,9 @@ foreach ($provinces as $p) {
     <div class="page-wrapper">
         <div class="page-content">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bx bx-edit" style="color:#2C4463; font-size:1.3rem;"></i>
-                    <h5 class="mb-0 fw-bold">Edit Gereja</h5>
+                <div class="admin-page-title">
+                    <i class="bx bx-edit"></i>
+                    <h5>Edit Gereja</h5>
                 </div>
                 <a href="<?= BASEURL; ?>admin/gereja<?= (!empty($filterSearch) || !empty($filterProvinsi)) ? '?q=' . urlencode($filterSearch) . '&provinsi=' . urlencode($filterProvinsi) : ''; ?>" class="btn btn-custom-outline btn-sm">
                     <i class="bx bx-arrow-back me-1"></i>Kembali

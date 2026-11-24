@@ -135,4 +135,44 @@ class HomeController extends Controller
 
         $this->view('home/index', $data);
     }
+
+    public function sitemap()
+    {
+        $modelGereja = new ModelGereja();
+        $rows = $modelGereja->rawQuery("SELECT id, slug, updated_at FROM gereja ORDER BY id ASC");
+
+        header('Content-Type: application/xml; charset=utf-8');
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+
+        $staticPages = array(
+            array('loc' => BASEURL, 'priority' => '1.0', 'changefreq' => 'daily'),
+            array('loc' => BASEURL . 'cari', 'priority' => '0.8', 'changefreq' => 'weekly'),
+            array('loc' => BASEURL . 'jadwal', 'priority' => '0.9', 'changefreq' => 'daily'),
+            array('loc' => BASEURL . 'maps', 'priority' => '0.8', 'changefreq' => 'weekly'),
+        );
+
+        foreach ($staticPages as $page) {
+            echo "  <url>\n";
+            echo "    <loc>" . htmlspecialchars($page['loc'], ENT_XML1, 'UTF-8') . "</loc>\n";
+            echo "    <changefreq>" . $page['changefreq'] . "</changefreq>\n";
+            echo "    <priority>" . $page['priority'] . "</priority>\n";
+            echo "  </url>\n";
+        }
+
+        foreach ($rows as $g) {
+            $slugOrId = !empty($g->slug) ? $g->slug : $g->id;
+            $loc = BASEURL . 'gereja/' . rawurlencode($slugOrId);
+            $lastmod = !empty($g->updated_at) ? date('Y-m-d', strtotime($g->updated_at)) : date('Y-m-d');
+            echo "  <url>\n";
+            echo "    <loc>" . htmlspecialchars($loc, ENT_XML1, 'UTF-8') . "</loc>\n";
+            echo "    <lastmod>" . $lastmod . "</lastmod>\n";
+            echo "    <changefreq>weekly</changefreq>\n";
+            echo "    <priority>0.7</priority>\n";
+            echo "  </url>\n";
+        }
+
+        echo '</urlset>';
+        exit;
+    }
 }

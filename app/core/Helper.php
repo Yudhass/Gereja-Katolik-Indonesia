@@ -928,6 +928,31 @@ if (!function_exists('extractCoordinatesFromMapsUrl')) {
     }
 }
 
+if (!function_exists('decode_text')) {
+    function decode_text($value)
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+        $str = (string)$value;
+        for ($i = 0; $i < 5; $i++) {
+            $decoded = html_entity_decode($str, ENT_QUOTES, 'UTF-8');
+            if ($decoded === $str) {
+                break;
+            }
+            $str = $decoded;
+        }
+        return $str;
+    }
+}
+
+if (!function_exists('e_text')) {
+    function e_text($value)
+    {
+        return htmlspecialchars(decode_text($value), ENT_QUOTES, 'UTF-8');
+    }
+}
+
 /**
  * ============================================================================
  * CONDITIONAL FEATURE DETECTION

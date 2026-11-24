@@ -24,48 +24,140 @@ class AdminGerejaController extends Controller
     public function index()
     {
         $model = new ModelGereja();
-        $modelFoto = new ModelGerejaFoto();
-        $modelSocial = new ModelGerejaSocialMedia();
 
         $filterSearch = isset($_GET['q']) ? sanitize($_GET['q'], 'string') : '';
         $filterProvinsi = isset($_GET['provinsi']) ? sanitize($_GET['provinsi'], 'string') : '';
-
-        $sql = "SELECT * FROM gereja WHERE 1=1";
-        $params = array();
-
-        if (!empty($filterSearch)) {
-            $sql .= " AND (nama_gereja LIKE :q OR alamat LIKE :q2 OR provinsi LIKE :q3 OR kabupaten_kota LIKE :q4 OR kontak_telepon LIKE :q5)";
-            $like = "%{$filterSearch}%";
-            $params['q'] = $like;
-            $params['q2'] = $like;
-            $params['q3'] = $like;
-            $params['q4'] = $like;
-            $params['q5'] = $like;
-        }
-
-        if (!empty($filterProvinsi)) {
-            $sql .= " AND provinsi = :provinsi";
-            $params['provinsi'] = $filterProvinsi;
-        }
-
-        $sql .= " ORDER BY nama_gereja";
-
-        $gerejaList = $model->rawQuery($sql, $params);
-        foreach ($gerejaList as $g) {
-            $g->foto_list = $modelFoto->getByGereja($g->id);
-            $g->social_media_list = $modelSocial->getByGereja($g->id);
-        }
-
+        $totalGereja = $model->count();
         $provinces = $model->rawQuery('SELECT id, name FROM provinces ORDER BY name');
 
         $data = array(
             'title' => 'Data Gereja',
-            'gerejaList' => $gerejaList,
+            'totalGereja' => $totalGereja,
             'provinces' => $provinces,
             'filterSearch' => $filterSearch,
             'filterProvinsi' => $filterProvinsi,
         );
         $this->view('admin/gereja/index', $data);
+    }
+
+    public function datatable()
+    {
+        $model = new ModelGereja();
+
+        $draw = isset($_GET['draw']) ? (int)$_GET['draw'] : 1;
+        $start = isset($_GET['start']) ? max(0, (int)$_GET['start']) : 0;
+        $length = isset($_GET['length']) ? (int)$_GET['length'] : 10;
+        if ($length < 1 || $length > 100) {
+            $length = 10;
+        }
+
+        $filterSearch = isset($_GET['q']) ? trim(sanitize($_GET['q'], 'string')) : '';
+        $dtSearch = (isset($_GET['search']) && is_array($_GET['search']) && isset($_GET['search']['value']))
+            ? trim(sanitize($_GET['search']['value'], 'string'))
+            : '';
+        $searchTerm = $filterSearch !== '' ? $filterSearch : $dtSearch;
+        $filterProvinsi = isset($_GET['provinsi']) ? trim(sanitize($_GET['provinsi'], 'string')) : '';
+
+        $orderColMap = array(
+            0 => 'id',
+            1 => 'nama_gereja',
+            2 => 'provinsi',
+            3 => 'kontak_telepon',
+        );
+        $orderColIdx = (isset($_GET['order'][0]['column'])) ? (int)$_GET['order'][0]['column'] : 1;
+        $orderCol = isset($orderColMap[$orderColIdx]) ? $orderColMap[$orderColIdx] : 'nama_gereja';
+        $orderDirRaw = (isset($_GET['order'][0]['dir'])) ? strtoupper($_GET['order'][0]['dir']) : 'ASC';
+        $orderDir = ($orderDirRaw === 'DESC') ? 'DESC' : 'ASC';
+
+        $recordsTotal = (int)$model->count();
+
+        $whereSql = " WHERE 1=1";
+        $params = array();
+
+        if ($searchTerm !== '') {
+            $whereSql .= " AND (nama_gereja LIKE :q1 OR alamat LIKE :q2 OR provinsi LIKE :q3 OR kabupaten_kota LIKE :q4 OR kecamatan LIKE :q5 OR kelurahan LIKE :q6 OR kontak_telepon LIKE :q7)";
+            $like = "%{$searchTerm}%";
+            $params['q1'] = $like;
+            $params['q2'] = $like;
+            $params['q3'] = $like;
+            $params['q4'] = $like;
+            $params['q5'] = $like;
+            $params['q6'] = $like;
+            $params['q7'] = $like;
+        }
+
+        if ($filterProvinsi !== '') {
+            $whereSql .= " AND provinsi = :provinsi";
+            $params['provinsi'] = $filterProvinsi;
+        }
+
+        $countRows = $model->rawQuery("SELECT COUNT(*) AS cnt FROM gereja" . $whereSql, $params);
+        $recordsFiltered = (!empty($countRows) && isset($countRows[0]->cnt)) ? (int)$countRows[0]->cnt : 0;
+
+        $sql = "SELECT id, slug, nama_gereja, alamat, provinsi, kabupaten_kota, kecamatan, kelurahan, kontak_telepon, link_maps
+                FROM gereja" . $whereSql . "
+                ORDER BY {$orderCol} {$orderDir}
+                LIMIT {$length} OFFSET {$start}";
+        $rows = $model->rawQuery($sql, $params);
+
+        $fotoByGereja = array();
+        $socialByGereja = array();
+        if (!empty($rows)) {
+            $ids = array();
+            foreach ($rows as $r) {
+                $ids[] = (int)$r->id;
+            }
+            $idList = implode(',', $ids);
+
+            $fotos = $model->rawQuery("SELECT gereja_id, foto_url, keterangan FROM gereja_foto WHERE gereja_id IN ({$idList}) ORDER BY urutan ASC, id ASC");
+            foreach ($fotos as $f) {
+                $gid = (int)$f->gereja_id;
+                if (!isset($fotoByGereja[$gid])) $fotoByGereja[$gid] = array();
+                $fotoByGereja[$gid][] = array(
+                    'foto_url' => $f->foto_url,
+                    'keterangan' => isset($f->keterangan) ? decode_text($f->keterangan) : ''
+                );
+            }
+
+            $socials = $model->rawQuery("SELECT gereja_id, platform, url FROM gereja_social_media WHERE gereja_id IN ({$idList}) ORDER BY urutan ASC, id ASC");
+            foreach ($socials as $s) {
+                $gid = (int)$s->gereja_id;
+                if (!isset($socialByGereja[$gid])) $socialByGereja[$gid] = array();
+                $socialByGereja[$gid][] = array(
+                    'platform' => $s->platform,
+                    'url' => $s->url
+                );
+            }
+        }
+
+        $data = array();
+        foreach ($rows as $idx => $g) {
+            $gid = (int)$g->id;
+            $data[] = array(
+                'no' => $start + $idx + 1,
+                'id' => $gid,
+                'slug' => $g->slug,
+                'nama_gereja' => decode_text($g->nama_gereja),
+                'alamat' => decode_text($g->alamat),
+                'provinsi' => decode_text($g->provinsi),
+                'kabupaten_kota' => decode_text($g->kabupaten_kota),
+                'kecamatan' => decode_text($g->kecamatan),
+                'kelurahan' => decode_text($g->kelurahan),
+                'kontak_telepon' => decode_text($g->kontak_telepon),
+                'link_maps' => $g->link_maps,
+                'foto_list' => isset($fotoByGereja[$gid]) ? $fotoByGereja[$gid] : array(),
+                'social_media_list' => isset($socialByGereja[$gid]) ? $socialByGereja[$gid] : array(),
+            );
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(array(
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ));
+        exit;
     }
 
     private function saveFotos($gerejaId)

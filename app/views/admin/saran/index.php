@@ -1,21 +1,13 @@
-<?php $this->view('layouts/openTag', array('title' => $title, 'css' => array('assets/plugins/datatable/css/dataTables.bootstrap5.min.css'))); ?>
-<style>
-    .btn-custom-primary { background:#fff; border:2px solid #2C4463; color:#2C4463 !important; font-weight:600; }
-    .btn-custom-primary:hover { background:rgba(44,68,99,0.08); border-color:#1A2D47; color:#1A2D47 !important; }
-    .btn-approve { background:#198754; border-color:#198754; color:#fff; }
-    .btn-approve:hover { background:#157347; color:#fff; }
-    .btn-reject { background:#dc3545; border-color:#dc3545; color:#fff; }
-    .btn-reject:hover { background:#bb2d3b; color:#fff; }
-</style>
+<?php $this->view('layouts/openTag', array('title' => $title)); ?>
 <body>
 <div class="wrapper">
     <?php $this->view('layouts/admin_sidebar', array('sidebar' => 'saran')); ?>
     <?php $this->view('layouts/navbar'); ?>
     <div class="page-wrapper">
         <div class="page-content">
-            <div class="d-flex align-items-center gap-2 mb-3">
-                <i class="bx bx-message-dots" style="color:#2C4463; font-size:1.3rem;"></i>
-                <h5 class="mb-0 fw-bold">Kotak Saran Jadwal</h5>
+            <div class="admin-page-title mb-3">
+                <i class="bx bx-message-dots"></i>
+                <h5>Kotak Saran Jadwal</h5>
             </div>
 
             <div class="card">
